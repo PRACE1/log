@@ -1,11 +1,11 @@
-import Flags from 'country-flag-icons/react/3x2'
+import * as Flags from 'country-flag-icons/react/3x2'
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react'
 import { useLocation } from 'react-router-dom'
 import { CircleCheck, Clock, Copy, ExternalLink, Globe, HelpCircle, LogIn, Tag, Trash2 } from 'lucide-react'
 import { Badge, type BadgeColor, Dropdown, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@listeningkit/ui'
-import { loadAccounts } from '../lib/connections'
+import { getAccounts, type ConnectionRecord } from '../lib/connections'
 import { getListings, LISTING_STATUSES, LISTING_STATUS_LABELS, type ListingRecord, type ListingStatus } from '../lib/listings'
-import { SocialBadge, SOCIAL_ICONS } from '../lib/social-icons'
+import { SocialBadge, SocialGlyph, SOCIAL_ICONS } from '../lib/social-icons'
 import { MarketplaceImages } from './MarketplaceImages'
 
 const facebookIcon = SOCIAL_ICONS.find((icon) => icon.id === 'facebook')
@@ -81,7 +81,7 @@ function flagForLocation(location: string): ReactNode {
 export function DashboardListings() {
   const location = useLocation()
   const [listings, setListings] = useState<ListingRecord[] | null>(null)
-  const [accounts, setAccounts] = useState(() => loadAccounts())
+  const [accounts, setAccounts] = useState<ConnectionRecord[] | null>(null)
   const [filter, setFilter] = useState('all')
 
   const load = useCallback(() => {
@@ -96,11 +96,11 @@ export function DashboardListings() {
 
   // Pick up account changes made in Accounts/Settings when we come back.
   useEffect(() => {
-    setAccounts(loadAccounts())
+    getAccounts().then(setAccounts).catch(() => setAccounts([]))
   }, [location])
 
   const connectedAccounts = new Set(
-    accounts.filter((account) => account.platform === 'facebook' && account.connectedAt !== null).map((account) => account.label)
+    (accounts ?? []).filter((account) => account.platform === 'facebook' && account.connectedAt !== null).map((account) => account.label)
   )
   const isConnected = (account: string) => connectedAccounts.has(account)
 
@@ -181,7 +181,10 @@ export function DashboardListings() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={isConnected(listing.account) ? 'info' : 'muted'} dot={isConnected(listing.account)}>
+                      <Badge
+                        variant={isConnected(listing.account) ? 'info' : 'muted'}
+                        icon={facebookIcon ? <SocialGlyph icon={facebookIcon} className="size-3.5" /> : undefined}
+                      >
                         {listing.account}
                       </Badge>
                     </TableCell>

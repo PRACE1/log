@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Globe, Plus } from 'lucide-react'
+import { Cable, Globe, Plus, Settings, Unplug } from 'lucide-react'
 import {
   Badge,
-  Button,
+  Dropdown,
   Select,
   Table,
   TableBody,
@@ -14,9 +14,9 @@ import {
   useToast
 } from '@listeningkit/ui'
 import {
-  addAccount,
+  createAccount,
   disconnectAccount,
-  loadAccounts,
+  getAccounts,
   platformLabel,
   type ConnectionPlatform,
   type ConnectionRecord
@@ -49,33 +49,34 @@ export function DashboardAccounts() {
   const navigate = useNavigate()
   const location = useLocation()
   const { success, error: notifyError } = useToast()
-  const [accounts, setAccounts] = useState<ConnectionRecord[]>(() => loadAccounts())
+  const [accounts, setAccounts] = useState<ConnectionRecord[] | null>(null)
   const [filter, setFilter] = useState('all')
 
-  // Pick up connections changed in the Settings tab when we come back to this page.
+  const load = () =>
+    getAccounts().then(setAccounts).catch(() => setAccounts([]))
+
+  // Fetch through the connections API on mount and whenever we come back
+  // to this page (e.g. from the Settings tab after editing connections).
   useEffect(() => {
-    setAccounts(loadAccounts())
+    load()
   }, [location])
 
-  const refresh = () => setAccounts(loadAccounts())
+  const connectedCount = (accounts ?? []).filter((a) => a.connectedAt !== null).length
+  const rows = (accounts ?? []).filter((account) => filter === 'all' || filter === account.platform)
 
-  const connectedCount = accounts.filter((a) => a.connectedAt !== null).length
-  const rows = accounts.filter((account) => filter === 'all' || filter === account.platform)
-
-  function handleDisconnect(account: ConnectionRecord) {
+  async function handleDisconnect(account: ConnectionRecord) {
     try {
-      disconnectAccount(account.id)
-      refresh()
+      setAccounts(await disconnectAccount(account.id))
       success(`${account.label} disconnected`)
     } catch (err: unknown) {
       notifyError('Disconnect failed', err instanceof Error ? err.message : 'Could not disconnect.')
     }
   }
 
-  function handleAddAccount(platform: ConnectionPlatform) {
+  async function handleAddAccount(platform: ConnectionPlatform) {
     try {
-      const record = addAccount(platform)
-      setAccounts((prev) => [...prev, record])
+      const record = await createAccount(platform)
+      setAccounts((prev) => [...(prev ?? []), record])
       success(`${platformLabel(platform)} account added`)
       navigate('/dashboard/settings')
     } catch (err: unknown) {
@@ -89,7 +90,9 @@ export function DashboardAccounts() {
         <div>
           <h1 className="text-xl font-bold text-text-primary">Accounts</h1>
           <p className="text-sm text-text-secondary">
-            Social accounts and proxies ListeningKit reads from.
+            {accounts === null
+              ? 'Loading accounts…'
+              : 'Social accounts and proxies ListeningKit reads from.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -177,24 +180,41 @@ export function DashboardAccounts() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {connected ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDisconnect(account)}
-                        >
-                          Disconnect
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="gray"
-                          size="sm"
-                          onClick={() => navigate('/dashboard/settings')}
-                        >
-                          <Plus aria-hidden="true" className="size-4" />
-                          Connect
-                        </Button>
-                      )}
+                      <Dropdown
+                        aria-label={`${account.label} account actions`}
+                        items={
+                          connected
+                            ? [
+                                {
+                                  id: 'settings',
+                                  label: 'Open in Settings',
+                                  icon: <Settings aria-hidden="true" className="size-4" />,
+                                  onSelect: () => navigate('/dashboard/settings')
+                                },
+                                {
+                                  id: 'disconnect',
+                                  label: 'Disconnect',
+                                  icon: <Unplug aria-hidden="true" className="size-4" />,
+                                  danger: true,
+                                  onSelect: () => handleDisconnect(account)
+                                }
+                              ]
+                            : [
+                                {
+                                  id: 'connect',
+                                  label: 'Connect',
+                                  icon: <Cable aria-hidden="true" className="size-4" />,
+                                  onSelect: () => navigate('/dashboard/settings')
+                                },
+                                {
+                                  id: 'settings',
+                                  label: 'Open in Settings',
+                                  icon: <Settings aria-hidden="true" className="size-4" />,
+                                  onSelect: () => navigate('/dashboard/settings')
+                                }
+                              ]
+                        }
+                      />
                     </TableCell>
                   </TableRow>
                 )
@@ -204,7 +224,7 @@ export function DashboardAccounts() {
         </Table>
       )}
 
-      {rows.length === 0 && (
+      {accounts !== null && rows.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-text-secondary">
           {accounts.length === 0
             ? 'No accounts yet — add one to start listening.'
@@ -212,7 +232,7 @@ export function DashboardAccounts() {
         </p>
       )}
 
-      {connectedCount < accounts.length && (
+      {accounts !== null && connectedCount < accounts.length && (
         <p className="text-sm text-text-secondary">
           {connectedCount} of {accounts.length} accounts connected. Connect the rest in{' '}
           <button

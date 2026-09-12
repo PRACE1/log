@@ -14,7 +14,7 @@ const accounts: ConnectionRecord[] = [...MOCK_CONNECTIONS]
 export const connectionsApp = new Hono()
   .get('/accounts', (c) => c.json({ accounts: [...accounts] }))
   .post('/accounts', async (c) => {
-    const body = (await c.json().catch(() => null)) as { platform?: string } | null
+    const body = await c.req.json<{ platform?: string }>().catch(() => null)
     const platform = body?.platform
     if (platform !== 'facebook' && platform !== 'x' && platform !== 'reddit') {
       return c.json({ error: 'platform must be facebook, x, or reddit' }, 400)
@@ -30,7 +30,7 @@ export const connectionsApp = new Hono()
     return c.json({ account: record, accounts: [...accounts] }, 201)
   })
   .patch('/accounts/:accountId', async (c) => {
-    const body = (await c.json().catch(() => null)) as ConnectionRecord | null
+    const body = await c.req.json<ConnectionRecord>().catch(() => null)
     const index = accounts.findIndex((a) => a.id === c.req.param('accountId'))
     if (index === -1 || !body) return c.json({ error: 'Account not found' }, 404)
     accounts[index] = {

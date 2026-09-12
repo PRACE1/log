@@ -2,7 +2,7 @@ import { assertCookie } from './cookie'
 import { normalizeProxy } from './proxy'
 import { connectionsApp } from './server'
 import { platformLabel } from './store'
-import type { ConnectInput, ConnectionPlatform, ConnectionRecord, ConnectionStatus } from './types'
+import type { ConnectInput, ConnectionPlatform, ConnectionRecord } from './types'
 
 export type {
   ConnectInput,

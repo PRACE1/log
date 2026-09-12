@@ -118,6 +118,11 @@ media-outlet video {
   --btn-shadow-top: oklch(1 0 0 / 25%);
   border-color: transparent;
 }
+[data-variant='red'].shadow-hard {
+  --btn-shadow: #c81e1e;
+  --btn-shadow-top: #b91c1c;
+  border-color: transparent;
+}
 [data-variant='gray'].shadow-hard {
   --btn-shadow: transparent;
   --btn-shadow-top: transparent;

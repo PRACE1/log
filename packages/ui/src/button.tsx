@@ -24,6 +24,7 @@ const buttonVariants = cva(
         'blue-gradient':
           'bg-gradient-to-b from-[#3B9BFF] to-[#2B7FFF] text-white hover:from-[#2B7FFF] hover:to-[#1F6FE6] [&:not(.shadow-hard)]:active:translate-y-px',
         gray: 'border border-[rgba(43,127,255,0.1)] bg-[#EFF6FF] text-[#2B7FFF] hover:bg-[#E0EDFE] [&:not(.shadow-hard)]:active:translate-y-px',
+        red: 'bg-[#DC2626] text-white hover:bg-[#B91C1C] [&:not(.shadow-hard)]:active:translate-y-px',
       },
       shadow: {
         none: '',

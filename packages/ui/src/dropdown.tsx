@@ -126,15 +126,27 @@ export function Dropdown({ items, className, 'aria-label': ariaLabel }: Dropdown
     el?.scrollIntoView({ block: 'nearest' })
   }, [open, highlight])
 
+  // Same shape as Select: fold the interaction props (including the useClick
+  // `onClick` toggle) into one spread so a custom handler can call through to
+  // it instead of replacing it.
+  const referenceProps = getReferenceProps({
+    'aria-label': ariaLabel ?? 'Row actions',
+    onKeyDown: handleKeyDown
+  })
+
   return (
     <span ref={rootRef} className="relative inline-flex">
       <button
         type="button"
         ref={refs.setReference}
-        {...getReferenceProps({ 'aria-label': ariaLabel ?? 'Row actions' })}
-        onKeyDown={handleKeyDown}
+        {...referenceProps}
         aria-expanded={open}
         onClick={(event) => {
+          // Call the interaction handler first — it owns the open/close toggle.
+          // floating-ui's reference props type the handler as an opaque `{}`, so
+          // narrow it before invoking.
+          const toggle = referenceProps.onClick as ((e: React.MouseEvent) => void) | undefined
+          toggle?.(event)
           // Don't let a row-level click handler also fire for the menu button.
           event.stopPropagation()
           if (!open) setHighlight(items[0]?.id ?? '')
