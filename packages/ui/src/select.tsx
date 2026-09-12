@@ -163,7 +163,7 @@ middleware: [
         {...referenceProps}
         aria-expanded={open}
         className={cn(
-          'inline-flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-black/10 bg-white px-3 text-sm font-medium text-text-primary outline-none transition-colors',
+          'inline-flex h-9 w-full items-center justify-between gap-2 rounded-md border border-black/10 bg-white px-3 text-sm font-medium text-text-primary outline-none transition-colors',
           'hover:bg-black/[0.02] focus-visible:ring-2 focus-visible:ring-brand-500/40',
           className
         )}

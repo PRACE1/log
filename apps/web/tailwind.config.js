@@ -60,6 +60,15 @@ export default {
       },
       fontFamily: {
         sans: ['Satoshi', 'Inter', 'system-ui', 'sans-serif']
+      },
+      keyframes: {
+        'lk-cycle': {
+          '0%': { transform: 'rotateY(90deg)', opacity: '0.4' },
+          '100%': { transform: 'rotateY(0deg)', opacity: '1' }
+        }
+      },
+      animation: {
+        'lk-cycle': 'lk-cycle 0.28s ease-out'
       }
     }
   },

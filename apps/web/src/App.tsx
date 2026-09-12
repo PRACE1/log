@@ -8,6 +8,7 @@ import { DashboardSettings } from './components/DashboardSettings'
 import { DashboardGroups } from './components/DashboardGroups'
 import { DashboardAccounts } from './components/DashboardAccounts'
 import { DashboardMessanger } from './components/DashboardMessanger'
+import { DashboardListings } from './components/DashboardListings'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,7 @@ export function App() {
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardOverview />} />
               <Route path="groups" element={<DashboardGroups />} />
+              <Route path="facebook/listings" element={<DashboardListings />} />
               <Route path="accounts" element={<DashboardAccounts />} />
               <Route path="messages" element={<DashboardMessanger />} />
               <Route path="settings" element={<DashboardSettings />} />

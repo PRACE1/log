@@ -4,6 +4,7 @@ import {
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
   Squares2X2Icon,
+  TagIcon,
   UserCircleIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
@@ -15,6 +16,7 @@ type NavIcon = ComponentType<SVGProps<SVGSVGElement>>
 const NAV: Array<{ label: string; Icon: NavIcon; to?: string }> = [
   { label: 'Overview', Icon: Squares2X2Icon, to: '/dashboard' },
   { label: 'Groups', Icon: UsersIcon, to: '/dashboard/groups' },
+  { label: 'Listings', Icon: TagIcon, to: '/dashboard/facebook/listings' },
   { label: 'Accounts', Icon: UserCircleIcon, to: '/dashboard/accounts' },
   { label: 'Messages', Icon: ChatBubbleLeftRightIcon, to: '/dashboard/messages' },
   { label: 'Settings', Icon: Cog6ToothIcon, to: '/dashboard/settings' },
