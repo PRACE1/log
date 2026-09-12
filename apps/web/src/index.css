@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ods-bg-primary: #ffffff;
+    --ods-bg-secondary: #f8f9fc;
+    --ods-bg-tertiary: #f0f0f3;
+    --ods-text-primary: #1e2126;
+    --ods-text-secondary: #6b7280;
+    --ods-text-tertiary: #9ca3af;
+    --ods-border: #e5e7eb;
+    --ods-border-strong: #d1d5db;
+    --ods-brand-600: #2563eb;
+    --ods-brand-700: #1d4ed8;
+    /* Ported from ui-kit globals.css (light theme): button/squircle tokens. */
+    --radius: 0.625rem;
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --tk-background: #ffffff;
+    --tk-foreground: oklch(0.228 0.014 72);
+    --tk-card: oklch(0.962 0.008 92);
+    --tk-card-foreground: oklch(0.228 0.014 72);
+    --tk-popover: oklch(0.962 0.008 92);
+    --tk-popover-foreground: oklch(0.228 0.014 72);
+    --tk-primary: oklch(0.205 0 0);
+    --tk-primary-foreground: oklch(0.985 0 0);
+    --tk-secondary: oklch(0.97 0 0);
+    --tk-secondary-foreground: oklch(0.205 0 0);
+    --tk-muted: oklch(0.97 0 0);
+    --tk-muted-foreground: oklch(0.556 0 0);
+    --tk-accent: oklch(0.97 0 0);
+    --tk-accent-foreground: oklch(0.205 0 0);
+    --tk-destructive: oklch(0.577 0.245 27.325);
+    --tk-border: oklch(0.922 0 0);
+    --tk-input: oklch(0.922 0 0);
+    --tk-ring: oklch(0.708 0 0);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'Satoshi', Inter, system-ui, sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* VidStack outlet media renders width:100%/height:auto by default, which
+   letterboxes inside equal-height cells. Fill instead (vidstack's own
+   selectors are :where(), so this wins). */
+media-outlet video {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation: slide-in-from-right 0.2s ease-out;
+}
+
+/* Ported from ui-kit globals.css (@utility shadow-hard) — Tailwind v3 has no
+   @utility, so it lives here as plain CSS. Targets the .shadow-hard class
+   emitted by the Button's cva shadow=hard variant. */
+.shadow-hard {
+  box-shadow:
+    inset 0 1px 0 0 var(--btn-shadow-top, transparent),
+    inset 0 -2px 0 0 var(--btn-shadow, oklch(0 0 0 / 15%)),
+    0 0 3px 0 oklch(0 0 0 / 20%);
+}
+
+.shadow-hard:hover {
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in oklab, var(--btn-shadow-top, transparent), white 40%),
+    inset 0 -2px 0 0 color-mix(in oklab, var(--btn-shadow, oklch(0 0 0 / 15%)), white 40%),
+    0 0 3px 0 oklch(0 0 0 / 20%),
+    inset 0 0 6px 0 oklch(1 0 0 / 60%);
+}
+
+/* Pressed state: the outer glow drops away so the translate-y reads as sinking.
+   (Tailwind v3 `active:shadow-none` expands to a full box-shadow override and
+   would erase these manual shadows, so the state lives here.) */
+.shadow-hard:active {
+  box-shadow:
+    inset 0 1px 0 0 var(--btn-shadow-top, transparent),
+    inset 0 -2px 0 0 var(--btn-shadow, oklch(0 0 0 / 15%));
+}
+
+[data-variant='blue'].shadow-hard,
+[data-variant='blue-gradient'].shadow-hard {
+  --btn-shadow: #117eff;
+  --btn-shadow-top: #1f6fe6;
+  border-color: transparent;
+}
+[data-variant='ink'].shadow-hard {
+  --btn-shadow: oklch(0 0 0 / 60%);
+  --btn-shadow-top: oklch(1 0 0 / 25%);
+  border-color: transparent;
+}
+[data-variant='gray'].shadow-hard {
+  --btn-shadow: transparent;
+  --btn-shadow-top: transparent;
+}
+[data-variant='gray'].shadow-hard {
+  box-shadow:
+    0 0 2px 0 oklch(0 0 0 / 8%),
+    inset 0 0 0 1px rgba(43, 127, 255, 0.1);
+}
+[data-variant='gray'].shadow-hard:hover {
+  box-shadow:
+    0 0 2px 0 oklch(0 0 0 / 8%),
+    inset 0 0 6px 0 oklch(1 0 0 / 60%),
+    inset 0 0 0 1px rgba(43, 127, 255, 0.1);
+}
+
+
+/* torph injects [torph-root]{display:inline-block; white-space:nowrap} into <head>
+   at runtime � same specificity but ordered after our stylesheets, so long phrases
+   overflow. Override with a higher-specificity selector. */
+.morph-line[torph-root] {
+  display: block;
+  white-space: normal;
+  text-align: center;
+}

@@ -1,0 +1,210 @@
+/* Ported from ui-kit/packages/ui/src/styles/globals.css (font section only).
+ * ui-kit runs Tailwind v4 (@import "tailwindcss", @theme, @utility), which
+ * this app (Tailwind v3.4) can't parse, so only the @font-face + base
+ * rules are carried over. Font files live in apps/web/public/fonts/
+ * (copied from ui-kit/apps/web/public/fonts). */
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-LightItalic.woff') format('woff');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-MediumItalic.woff') format('woff');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi-webfont/Satoshi-BoldItalic.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  font-family: 'Satoshi', 'Inter', system-ui, sans-serif;
+}
+
+/* Custom cursors (apps/web/public/cursors) — PNG first, native keyword fallback.
+ * Hotspots match each glyph's click point. `html`-prefixed selectors outrank
+ * Tailwind preflight (e.g. its `button { cursor: pointer }`). */
+html {
+  cursor: url('/cursors/cursor_0.png') 2 2, default;
+}
+
+html a,
+html button,
+html [role='button'],
+html input:is([type='button'], [type='submit'], [type='reset']),
+html label[for],
+html select,
+html summary {
+  cursor: url('/cursors/cursor_1.png') 10 3, pointer;
+}
+
+html button:disabled,
+html [aria-disabled='true'] {
+  cursor: url('/cursors/cursor_0.png') 2 2, not-allowed;
+}
+
+html input:is(
+    [type='text'],
+    [type='password'],
+    [type='email'],
+    [type='search'],
+    [type='url'],
+    [type='number'],
+    [type='tel'],
+    :not([type])
+  ),
+html textarea,
+html [contenteditable='true'] {
+  cursor: url('/cursors/cursor_3.png') 16 16, text;
+}
+
+html [data-cursor='grab'],
+html .cursor-grab {
+  cursor: url('/cursors/cursor_4.png') 16 16, grab;
+}
+
+html [data-cursor='grabbing'],
+html .cursor-grabbing {
+  cursor: url('/cursors/cursor_6.png') 16 16, grabbing;
+}
+
+html [data-cursor='ns-resize'],
+html .cursor-ns-resize {
+  cursor: url('/cursors/cursor_2.png') 16 16, ns-resize;
+}
+
+html [data-cursor='col-resize'],
+html .cursor-col-resize {
+  cursor: url('/cursors/cursor_5.png') 16 16, col-resize;
+}
+
+html [data-cursor='ew-resize'],
+html .cursor-ew-resize {
+  cursor: url('/cursors/cursor_7.png') 12 5, ew-resize;
+}
+
+/* Logo-reveal edge halo — spinning outward-facing stripes around the screen
+ * edges. Blue stripes alternate with white, the whole ring rotates, and a
+ * radial white fade melts the blue into white toward the center. */
+@keyframes lk-edge-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lk-edge-halo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lk-edge-halo-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150vmax;
+  height: 150vmax;
+  translate: -50% -50%;
+  /* No mask here — this whole disc spins as one piece around the screen
+   * center. The fade layer on top carves out the middle. */
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(42, 140, 255, 0.08) 0deg 18deg,
+    #ffffff 18deg 36deg
+  );
+  animation: lk-edge-spin 80s linear infinite;
+  will-change: transform;
+}
+
+.lk-edge-halo-fade {
+  position: absolute;
+  inset: -1px;
+  /* Static white cover: opaque rectangle in the middle feathering out to
+   * transparent at the screen edges, so stripes show only around the edges. */
+  background: #ffffff;
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%),
+    linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%),
+    linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-composite: intersect;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-edge-halo-spinner {
+    animation: none;
+  }
+}
+
+/* Scroll without the scrollbar UI — content still scrolls, no webkit /
+ * Firefox / legacy Edge scrollbar chrome renders. */
+.lk-no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.lk-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

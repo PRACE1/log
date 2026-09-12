@@ -1,0 +1,88 @@
+/* Chatscope UI Kit overrides, scoped to the messenger pane.
+   The installed kit version ships hardcoded SCSS values (Helvetica, #c6e3fa, etc.)
+   with no CSS custom properties, so we override the concrete selectors here.
+   All sizing in the kit is em-relative to the .cs-messenger font-size below. */
+
+.cs-messenger {
+  font-family: 'Satoshi', 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--ods-text-primary, #1a2433);
+}
+
+/* --- Message list --- */
+
+.cs-messenger .cs-message-list {
+  background-color: #ffffff;
+  color: var(--ods-text-primary, #1a2433);
+}
+
+.cs-messenger .cs-message {
+  font-family: inherit;
+  color: var(--ods-text-primary, #1a2433);
+}
+
+/* Show sender name + time on every message (kit defaults only show on first/single). */
+.cs-messenger .cs-message__sender-name,
+.cs-messenger .cs-message__sent-time {
+  display: inline !important;
+}
+
+.cs-messenger .cs-message__header,
+.cs-messenger .cs-message__footer {
+  color: #667085;
+  background-color: transparent;
+  font-size: 0.75em;
+  font-weight: 500;
+}
+
+.cs-messenger .cs-message--incoming .cs-message__header {
+  margin-bottom: 0.15em;
+}
+
+.cs-messenger .cs-message--outgoing .cs-message__footer {
+  margin-top: 0.15em;
+}
+
+/* --- Message bubbles: the kit wrapper shell only; the real squircle bubble
+   (with a pinched tail corner) is rendered inside via Message.CustomContent --- */
+
+.cs-messenger .cs-message__content {
+  font-family: inherit;
+  font-size: 0.95em;
+  line-height: 1.4;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+  white-space: pre-wrap;
+}
+
+.cs-messenger .cs-message--incoming .cs-message__content {
+  background-color: transparent;
+}
+
+.cs-messenger .cs-message--outgoing .cs-message__content {
+  background-color: transparent;
+}
+
+/* The kit's .first/.single/.last position rules carry a HIGHER specificity
+   (4 classes) and hardcode #c6e3fa / #6EAAD8 backgrounds — beat them exactly. */
+.cs-messenger .cs-message.cs-message--first .cs-message__content,
+.cs-messenger .cs-message.cs-message--single .cs-message__content,
+.cs-messenger .cs-message.cs-message--last .cs-message__content {
+  background-color: transparent;
+  border-radius: 0;
+}
+
+/* --- Loader --- */
+
+.cs-messenger .cs-loader {
+  color: #667085;
+}
+
+.cs-messenger .cs-loader::before {
+  border-color: #e4e7ec;
+}
+
+.cs-messenger .cs-loader::after {
+  border-color: #2a8cff transparent transparent transparent;
+}
