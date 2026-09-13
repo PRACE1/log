@@ -21,6 +21,11 @@ import {
   type ConnectionPlatform,
   type ConnectionRecord
 } from '../lib/connections'
+import {
+  accountIssueSnapshot,
+  effectiveSeverity,
+  type IssueSeverity
+} from '../lib/account-issues'
 import { SocialBadge, SOCIAL_ICONS } from '../lib/social-icons'
 
 const PLATFORMS: ConnectionPlatform[] = ['facebook', 'x', 'reddit']
@@ -45,6 +50,36 @@ function formatConnectedAt(iso: string | null): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+const SEVERITY_BADGE: Record<IssueSeverity, 'success' | 'warning' | 'danger'> = {
+  healthy: 'success',
+  degraded: 'warning',
+  unhealthy: 'danger'
+}
+
+/**
+ * The row's status badge: the active normalized issue wins when the client
+ * has observed one ("Checkpoint challenge", "Rate limited"), falling back to
+ * the lifecycle state ("Connected" / "Stale" / "Not connected").
+ */
+function StatusBadge({ account }: { account: ConnectionRecord }) {
+  const snapshot = accountIssueSnapshot(account)
+  const severity = effectiveSeverity(snapshot)
+  const issue = snapshot.issue
+  const label = issue
+    ? issue.label
+    : severity === 'healthy'
+      ? 'Connected'
+      : severity === 'degraded'
+        ? 'Stale'
+        : 'Not connected'
+  const title = issue ? issue.detail : snapshot.health.reason
+  return (
+    <Badge variant={SEVERITY_BADGE[severity]} dot={severity !== 'unhealthy'} title={title}>
+      {label}
+    </Badge>
+  )
+}
+
 export function DashboardAccounts() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -61,7 +96,6 @@ export function DashboardAccounts() {
     load()
   }, [location])
 
-  const connectedCount = (accounts ?? []).filter((a) => a.connectedAt !== null).length
   const rows = (accounts ?? []).filter((account) => filter === 'all' || filter === account.platform)
 
   async function handleDisconnect(account: ConnectionRecord) {
@@ -92,7 +126,7 @@ export function DashboardAccounts() {
           <p className="text-sm text-text-secondary">
             {accounts === null
               ? 'Loading accounts…'
-              : 'Social accounts and proxies ListeningKit reads from.'}
+              : 'Social accounts and proxies ListeningKit reads from. Click a row for its full state.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -143,9 +177,12 @@ export function DashboardAccounts() {
             <TableBody>
               {rows.map((account) => {
                 const icon = socialIconFor(account.platform)
-                const connected = account.connectedAt !== null
                 return (
-                  <TableRow key={account.id}>
+                  <TableRow
+                    key={account.id}
+                    onClick={() => navigate(`/dashboard/accounts/${account.id}`)}
+                    className="cursor-pointer hover:bg-black/[0.025]"
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {icon ? (
@@ -157,19 +194,13 @@ export function DashboardAccounts() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {connected ? (
-                        <Badge variant="success" dot>
-                          Connected
-                        </Badge>
-                      ) : (
-                        <Badge variant="muted">Not connected</Badge>
-                      )}
+                      <StatusBadge account={account} />
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-text-secondary">
                       {formatConnectedAt(account.connectedAt)}
                     </TableCell>
                     <TableCell>
-                      {connected ? (
+                      {account.connectedAt ? (
                         account.viaProxy ? (
                           <Badge variant="info">Via proxy</Badge>
                         ) : (
@@ -179,11 +210,14 @@ export function DashboardAccounts() {
                         <span className="text-text-secondary">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell
+                      className="text-right"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       <Dropdown
                         aria-label={`${account.label} account actions`}
                         items={
-                          connected
+                          account.connectedAt
                             ? [
                                 {
                                   id: 'settings',
@@ -232,19 +266,6 @@ export function DashboardAccounts() {
         </p>
       )}
 
-      {accounts !== null && connectedCount < accounts.length && (
-        <p className="text-sm text-text-secondary">
-          {connectedCount} of {accounts.length} accounts connected. Connect the rest in{' '}
-          <button
-            type="button"
-            className="font-semibold text-brand-600 underline underline-offset-2 hover:text-brand-700"
-            onClick={() => navigate('/dashboard/settings')}
-          >
-            Settings
-          </button>
-          .
-        </p>
-      )}
     </div>
   )
 }

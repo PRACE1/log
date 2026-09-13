@@ -23,7 +23,8 @@ const STEP_TRANSITION = { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const }
 export interface FormSheetProps {
   open: boolean
   title: string
-  subtitle?: string
+  /** One-line context under the title; a node so callers can compose in badges/icons. */
+  subtitle?: ReactNode
   /** 1-based current step. */
   step?: number
   /**
@@ -142,7 +143,7 @@ function FormSheetSurface({
   onClose
 }: {
   title: string
-  subtitle?: string
+  subtitle?: ReactNode
   multiStep: boolean
   step?: number
   stepCount?: number
@@ -167,7 +168,11 @@ function FormSheetSurface({
       <div className="flex items-start justify-between gap-4 px-6 pt-5">
         <div className="min-w-0">
           <h2 className="text-lg font-bold text-text-primary">{title}</h2>
-          {subtitle ? <p className="mt-0.5 text-sm text-text-secondary">{subtitle}</p> : null}
+          {subtitle ? (
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-text-secondary">
+              {subtitle}
+            </p>
+          ) : null}
         </div>
         <button
           type="button"

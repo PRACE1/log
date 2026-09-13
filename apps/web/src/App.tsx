@@ -1,14 +1,18 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Button, ToastProvider } from '@listeningkit/ui'
+import { ToastProvider } from '@listeningkit/ui'
 import { OnboardingPage } from './pages/onboarding/OnboardingPage'
 import { DashboardLayout } from './components/DashboardLayout'
 import { DashboardOverview } from './components/DashboardOverview'
 import { DashboardSettings } from './components/DashboardSettings'
 import { DashboardGroups } from './components/DashboardGroups'
 import { DashboardAccounts } from './components/DashboardAccounts'
-import { DashboardMessanger } from './components/DashboardMessanger'
+import { DashboardMessages } from './components/DashboardMessages'
 import { DashboardListings } from './components/DashboardListings'
+import { DashboardKeywords } from './components/DashboardKeywords'
+import { DashboardAnalyticsOverview } from './components/DashboardAnalyticsOverview'
+import { DashboardAnalyticsPage } from './components/DashboardAnalyticsPage'
+import { DashboardAccountPage } from './components/DashboardAccountPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,36 +23,12 @@ const queryClient = new QueryClient({
   }
 })
 
-function HomePage() {
-  return (
-    <div className="min-h-screen bg-surface-secondary text-text-primary">
-      <main className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-16">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">ListeningKit Hackathon</p>
-        <h1 className="text-4xl font-bold">Vite monorepo is running.</h1>
-        <p className="text-text-secondary">
-          Stack matches open-offer-builder / dialer: Vite + React 18 + TS + react-router + TanStack Query +
-          Tailwind 3. Shared UI lives in <code>@listeningkit/ui</code>.
-        </p>
-        <div className="flex gap-3">
-          <Button>Primary action</Button>
-          <Button variant="secondary">
-            <Link to="/onboarding">Onboarding</Link>
-          </Button>
-          <Button variant="ghost">
-            <Link to="/health">Health check</Link>
-          </Button>
-        </div>
-      </main>
-    </div>
-  )
-}
-
 function HealthPage() {
   return (
     <div className="min-h-screen bg-surface-primary p-8 text-text-primary">
       <p className="text-sm text-text-secondary">ok — router + query client wired.</p>
-      <Link to="/" className="text-brand-600 underline">
-        Back home
+      <Link to="/onboarding" className="text-brand-600 underline">
+        Back to onboarding
       </Link>
     </div>
   )
@@ -60,18 +40,22 @@ export function App() {
       <ToastProvider>
         <Router>
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<Navigate to="/onboarding" replace />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardOverview />} />
               <Route path="groups" element={<DashboardGroups />} />
               <Route path="facebook/listings" element={<DashboardListings />} />
+              <Route path="keywords" element={<DashboardKeywords />} />
+              <Route path="analytics" element={<DashboardAnalyticsOverview />} />
+              <Route path="analytics/:keywordId" element={<DashboardAnalyticsPage />} />
               <Route path="accounts" element={<DashboardAccounts />} />
-              <Route path="messages" element={<DashboardMessanger />} />
+              <Route path="accounts/:accountId" element={<DashboardAccountPage />} />
+              <Route path="messages" element={<DashboardMessages />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/health" element={<HealthPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/onboarding" replace />} />
           </Routes>
         </Router>
       </ToastProvider>

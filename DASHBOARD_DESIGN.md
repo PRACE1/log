@@ -92,11 +92,109 @@ Collapse is **one continuous width animation** — nothing re-centers or snaps:
 - A `useEffect` on `location` re-reads the store so changes made in Settings appear when navigating back.
 - Footer hint when some accounts are not yet connected (with a Settings link), plus empty states for "no accounts" vs "filtered out".
 
+### Keywords table account badge (`DashboardKeywords.tsx`)
+
+- The table view carries an **Account** column: a `neutral` `Badge` with the
+  scoped group's `accountLabel` (the account the group was joined as, so the
+  account the keyword's signals arrive through); `—` when scopeless.
+- Hovering the badge opens the same dark tooltip bubble as the analytics
+  `Info` tooltips, sized up for the row context (`w-64 p-3`): bold account
+  name + which group it serves and what it means. A native `title` attr
+  backs it; the bubble is `pointer-events-none` so row-click navigation
+  never breaks.
+- Placement constraint: the bubble opens to the **right** of the badge
+  (`left-full`, vertically centered), never below — table rows carry a
+  squircle `clipPath` and the table scrolls horizontally, so anything
+  overflowing the row box top/bottom would be clipped.
+
 ## Social identity (`social-icons.tsx`)
 
-- `SOCIAL_ICONS` from `simple-icons` paths — **facebook, x, reddit** only.
-- `SocialGlyph` — raw 24-viewBox path glyph.
-- `SocialBadge` — squircle avatar (r12), two-layer: squircle clip on the span + border-stroke SVG on a radius+1 path. `blue` variant (solid `#2A8CFF`, white stroke, white glyph) for table rows and the header cluster; `white` variant (white fill, blue stroke, blue glyph) for light-on-light contexts. The 2px stroke replaces the old `ring-2` (which a clipPath would have erased).
+## Analytics charts (`DashboardAnalytics.tsx`)
+
+Per-keyword graphs (`/dashboard/analytics/:keywordId`, row one) plus the
+firehose console (row two). The graphs follow a single-hue brand-blue board
+— one hero hue, darkest = most important — so the whole row reads as one family.
+
+### Color board (custom, locked — do not mix in other hues)
+
+Derived from the brand blue `#2A8CFF`:
+
+| Token | Value | Role |
+|---|---|---|
+| `HERO` | `#2A8CFF` | Brand blue — trend line + dots, top-ranked row, positive slice |
+| `DEEP` | `#0B3B8F` | Darkest — most important (rank-1 row, active dot) |
+| `MID` | `#6FA8F5` | Mid rank |
+| `SOFT` | `#9DC2F7` | Neutral slice |
+| `PALE` | `#D3E5FA` | Palest — lowest rank / negative slice |
+| `GRID` | `#E4E7EC` | Hairline grid + tooltip border |
+| `TICK` | `#64748B` | Axis ticks, bar count labels |
+| Value ink | `#0B0B0C` | **All** metric values — Satoshi Black (see below), never blue |
+
+- `ROW_RAMP = [DEEP, HERO, MID, PALE]` — signal-mix rows ranked darkest-first.
+- `SENTIMENT_COLORS = [HERO, SOFT, PALE]` — sentiment stays in-hue; the
+  positive/neutral/negative meaning is carried by labels, never color alone.
+- Chart fills are `HERO` at 0.32 → 0.02 opacity; stroke width ~2.75 (ink boost)
+  so thin lines survive on white.
+
+### Value typography — Satoshi Black, always
+
+Every metric value (`222 mentions`, `120 signals`, `% positive`, donut center,
+legend numbers, bar `LabelList` counts) renders in **Satoshi 900** at
+`#0B0B0C`:
+
+```tsx
+style={{ fontFamily: "'Satoshi', Inter, system-ui, sans-serif", fontWeight: 900, color: '#0B0B0C' }}
+```
+
+Blue is reserved for the geometry and the header badge — values are never blue.
+
+### Card anatomy (top to bottom)
+
+1. **Header** — a `Badge` (`variant="brand"`, per rule 4) with the conclusion
+   title (`Mentions peaked at 24 on Sep 8`, `Questions carry the stream`,
+   `38% of mentions read positive`). No hand-rolled pills.
+2. **Metric** — Satoshi Black value + an `Info` (lucide) icon carrying the
+   how-to-read note in a hover tooltip (`title` attr + custom `group-hover`
+   bubble). The old sub-captions (`one dot = one day…`) and source captions
+   (`Hairline line · F2 · …`) were removed — the note lives only in the tooltip.
+3. **Chart** — `h-56` recharts surface (see grammar below).
+4. Cards are r20 squircles (`useSquircleClip`), `bg-white p-5`.
+
+### Tooltip minis
+
+Each info tooltip pairs its note with a minified inline-SVG visual on the
+left (frosted `bg-white/10` chip inside the dark bubble), illustrating what
+the card shows:
+
+- `MiniTrend` — 64×30 area + dot line (mentions).
+- `MiniRows` — 4 ranked rounded bars, darkest first (signal mix).
+- `MiniDonut` — 3-tick blue donut (sentiment).
+
+`ChartCard` takes `info: string` + optional `infoVisual: ReactNode`; the
+bubble is `w-56 flex` so the mini sits left, text right. Screen readers get
+the note via `sr-only` (the visual is `aria-hidden`).
+
+### Chart grammar
+
+- **Mentions trend** — hairline area + per-day dots (`r=2.5`, `activeDot` in
+  `DEEP` with white ring). Tooltip: `Sep 12 · phrase — N mentions`. Header
+  names the peak; the metric carries the 14-day total + average lives in the
+  tooltip note.
+- **Signal mix** — horizontal bars by event kind
+  (mention/question/complaint/praise, ranked), value labels at bar ends in
+  Satoshi Black. This replaced the old "by platform" card, which could only
+  ever render **one** bar for a platform-scoped keyword.
+- **Sentiment donut** — `innerRadius 66% / outerRadius 88%`, `paddingAngle 3`,
+  `cornerRadius 4`, white 2px separators; center overlay repeats the positive
+  % in Satoshi Black; legend dots + names + Satoshi Black %s below.
+
+### Libraries in play
+
+- **`recharts`** (`apps/web/package.json`) — `AreaChart`/`Area`, `BarChart`/`Bar`
+  + `LabelList`/`Cell`, `PieChart`/`Pie`, `CartesianGrid`, `XAxis`/`YAxis`,
+  `Tooltip`, `ResponsiveContainer`. No ECharts dependency.
+- **`lucide-react`** — `Info` icon for the how-to-read tooltips.
+- **`@listeningkit/ui`** — `Badge` (card headers), `useSquircleClip` (card shape).
 
 ## Hard rules (user-enforced, do not regress)
 
@@ -117,6 +215,12 @@ Collapse is **one continuous width animation** — nothing re-centers or snaps:
 | `apps/web/src/components/DashboardHeader.tsx` | Top bar + overlapping `SocialBadge` cluster |
 | `apps/web/src/components/DashboardSettingsConnections.tsx` | Store-driven connect/duplicate/delete flow |
 | `apps/web/src/components/DashboardAccounts.tsx` | Store-driven table, filter, add-account |
+| `apps/web/src/components/DashboardKeywords.tsx` | Keywords cards/table, account badge + tooltip, keyword form slot |
+| `apps/web/src/components/DashboardAnalytics.tsx` | Per-keyword graphs: brand-blue board, Satoshi Black values, Badge headers, tooltip minis |
+| `apps/web/src/components/DashboardAnalyticsConsole.tsx` | Firehose console: type filter tabs, capped event list |
+| `apps/web/src/components/DashboardAnalyticsOverview.tsx` | Analytics landing: platform filter + full firehose |
+| `apps/web/src/components/DashboardAnalyticsPage.tsx` | Per-keyword route: header meta + graphs + console |
+| `apps/web/src/lib/analytics/{types,mock,index}.ts` | Analytics model + deterministic mock aggregates |
 | `apps/web/src/lib/connections/{types,store,index,cookie,proxy}.ts` | Account model, persistence, connect/test lib |
 | `apps/web/src/lib/social-icons.tsx` | Icons, `SocialGlyph`, `SocialBadge` |
 | `packages/ui/src/squircle.tsx` | Squircle path/clip/border hooks |

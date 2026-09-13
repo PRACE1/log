@@ -9,6 +9,13 @@ import { useComposedRef, useSquircleClip } from '@listeningkit/ui'
 
 const FRAME_PADDING = 16 // must match the p-4 mat below
 
+/** Full-size design widths in px for each platform's Paper card. */
+export const CARD_NATURAL_WIDTHS = {
+  facebook: 713.42,
+  x: 484,
+  reddit: 864
+} as const
+
 export function FeedCardFrame({
   naturalWidth,
   radius = 24,

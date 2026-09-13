@@ -62,7 +62,7 @@ export function DashboardLayout() {
             spot) — the dashboard underneath keeps its full width with zero
             reflow. The panel lives in a memoized child so page re-renders
             (polling, filters, per-card busy states) never re-render it. */}
-          <FormOverlay formSlot={formSlot} />
+          <FormOverlay formSlot={formSlot} onDismiss={() => setFormSlot(null)} />
         </div>
       </div>
     </div>
@@ -79,7 +79,18 @@ export function DashboardLayout() {
  * reflows. The layer is click-through except for the panel itself; the
  * form's own Cancel/Escape/confirm paths close it.
  */
-const FormOverlay = memo(function FormOverlay({ formSlot }: { formSlot: ReactNode | null }) {
+const FormOverlay = memo(function FormOverlay({
+  formSlot,
+  onDismiss
+}: {
+  formSlot: ReactNode | null
+  onDismiss: () => void
+}) {
+  // Inset + squircle-clipped to sit *inside* the panel: the scrim covers
+  // only the inner dashboard layout, never the panel's squircle edge. The
+  // scrim is the backdrop-click close path (same as Cancel/Escape) — the
+  // form panel is a sibling, so clicks inside it never reach it.
+  const overlayClip = useSquircleClip<HTMLDivElement>(20)
   return (
     <AnimatePresence initial={false}>
       {formSlot ? (
@@ -89,12 +100,19 @@ const FormOverlay = memo(function FormOverlay({ formSlot }: { formSlot: ReactNod
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-none absolute inset-0 z-30"
+          className="pointer-events-none absolute inset-2 z-30"
           aria-hidden={false}
         >
-          <div className="absolute inset-0 bg-[#0A1830]/45" aria-hidden="true" />
-          <div className="absolute inset-y-0 right-0 py-6 pr-6 sm:py-8 sm:pr-8">
-            <div className="pointer-events-auto h-full w-[400px]">{formSlot}</div>
+          <div ref={overlayClip.ref} style={overlayClip.style} className="relative h-full w-full overflow-hidden">
+            <div
+              className="absolute inset-0 bg-[#0A1830]/45"
+              aria-hidden="true"
+              onClick={onDismiss}
+              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+            />
+            <div className="absolute inset-y-0 right-0 py-6 pr-6 sm:py-8 sm:pr-8">
+              <div className="pointer-events-auto h-full w-[400px]">{formSlot}</div>
+            </div>
           </div>
         </motion.div>
       ) : null}

@@ -44,3 +44,6 @@ yarn-error.log*
 
 # playwright-cli artifacts
 .playwright-cli/
+
+# railcode deploy sync state (per-folder; never commit)
+.railcode

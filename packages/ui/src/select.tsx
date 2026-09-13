@@ -40,6 +40,12 @@ export interface SelectProps {
   placeholder?: string
   /** Optional content rendered before the label in the trigger (e.g. a platform icon). */
   icon?: React.ReactNode
+  /**
+   * Optional footer pinned to the bottom of the floating menu (below the
+   * scrollable options, always visible) — e.g. a type-to-add row. Lives
+   * inside the portal, so it floats with the menu instead of the page flow.
+   */
+  menuFooter?: React.ReactNode
   className?: string
   'aria-label'?: string
 }
@@ -51,6 +57,7 @@ export function Select({
   matchWidth = false,
   placeholder = 'Select…',
   icon,
+  menuFooter,
   className,
   'aria-label': ariaLabel
 }: SelectProps) {
@@ -202,6 +209,7 @@ middleware: [
               activeValue={highlight}
               selectedValue={value}
               options={options}
+              footer={menuFooter}
               onHover={setHighlight}
               onSelect={(next) => {
                 setOpen(false)
@@ -222,12 +230,13 @@ interface SurfaceProps {
   activeValue: string
   selectedValue?: string
   options: SelectOption[]
+  footer?: React.ReactNode
   onHover: (value: string) => void
   onSelect: (value: string) => void
 }
 
 const SelectMenuSurface = React.forwardRef<HTMLDivElement, SurfaceProps>(function SelectMenuSurface(
-  { floatingStyle, floatingProps, syncClip, activeValue, selectedValue, options, onHover, onSelect },
+  { floatingStyle, floatingProps, syncClip, activeValue, selectedValue, options, footer, onHover, onSelect },
   forwardedRef
 ) {
   const clip = useSquircleClip<HTMLDivElement>(RADIUS)
@@ -246,11 +255,10 @@ const SelectMenuSurface = React.forwardRef<HTMLDivElement, SurfaceProps>(functio
       onUpdate={syncClip}
       onAnimationStart={syncClip}
       onAnimationComplete={syncClip}
-      className="w-full overflow-hidden bg-white"
+      className="z-50 w-max min-w-[180px] max-w-[calc(100vw-16px)] overflow-hidden bg-white"
     >
       <div
         ref={border.ref}
-        aria-hidden="true"
         className="relative"
       >
         <svg
@@ -281,16 +289,7 @@ const SelectMenuSurface = React.forwardRef<HTMLDivElement, SurfaceProps>(functio
                 active ? 'bg-black/[0.04]' : ''
               )}
             >
-              {option.icon ? (
-                <span
-                  className={cn(
-                    'flex size-7 shrink-0 items-center justify-center rounded-lg',
-                    active ? 'bg-[#2A8CFF] text-white' : 'bg-[#F4F9FF] text-[#288DFF]'
-                  )}
-                >
-                  {option.icon}
-                </span>
-              ) : null}
+              {option.icon}
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
                 {option.label}
               </span>
@@ -308,6 +307,7 @@ const SelectMenuSurface = React.forwardRef<HTMLDivElement, SurfaceProps>(functio
           )
         })}
       </div>
+      {footer ? <div className="relative border-t border-black/5 p-2">{footer}</div> : null}
       </div>
     </motion.div>
   )

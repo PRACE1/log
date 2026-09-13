@@ -1,10 +1,10 @@
 import * as Flags from 'country-flag-icons/react/3x2'
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react'
 import { useLocation } from 'react-router-dom'
-import { CircleCheck, Clock, Copy, ExternalLink, Globe, HelpCircle, LogIn, Plus, Tag, Trash2 } from 'lucide-react'
-import { Badge, Button, type BadgeColor, Dropdown, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@listeningkit/ui'
+import { CircleCheck, Clock, Copy, ExternalLink, Globe, HelpCircle, LogIn, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
+import { Badge, Button, type BadgeColor, Dropdown, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, useToast } from '@listeningkit/ui'
 import { getAccounts, type ConnectionRecord } from '../lib/connections'
-import { getListings, LISTING_STATUSES, LISTING_STATUS_LABELS, type ListingRecord, type ListingStatus } from '../lib/listings'
+import { getListings, LISTING_STATUSES, LISTING_STATUS_LABELS, setListingStatus, type ListingRecord, type ListingStatus } from '../lib/listings'
 import { SocialBadge, SocialGlyph, SOCIAL_ICONS } from '../lib/social-icons'
 import { MarketplaceImages } from './MarketplaceImages'
 import { DashboardListingsForm } from './DashboardListingsForm'
@@ -81,11 +81,15 @@ function flagForLocation(location: string): ReactNode {
 }
 
 export function DashboardListings() {
+  const { success, error: notifyError } = useToast()
   const location = useLocation()
   const [listings, setListings] = useState<ListingRecord[] | null>(null)
   const [accounts, setAccounts] = useState<ConnectionRecord[] | null>(null)
   const [filter, setFilter] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
+  // Edit scope: set alongside formOpen to jump the form straight to the
+  // details step for this listing; null means create mode.
+  const [editScope, setEditScope] = useState<ListingRecord | null>(null)
 
   const load = useCallback(() => {
     getListings()
@@ -97,17 +101,24 @@ export function DashboardListings() {
     load()
   }, [load])
 
-  // The form lives in the layout's third column, not in the page: register
-  // it when open, clear it when closed or when the page unmounts.
+  // The form lives in the layout overlay, not in the page: register it
+  // when open, clear it when closed or when the page unmounts.
   const setFormSlot = useDashboardFormSlot()
   useEffect(() => {
     if (!formOpen) {
       setFormSlot(null)
       return
     }
-    setFormSlot(<DashboardListingsForm open onClose={() => setFormOpen(false)} onCreated={load} />)
+    setFormSlot(
+      <DashboardListingsForm
+        open
+        onClose={() => setFormOpen(false)}
+        onCreated={load}
+        initialListing={editScope}
+      />
+    )
     return () => setFormSlot(null)
-  }, [formOpen, load, setFormSlot])
+  }, [formOpen, editScope, load, setFormSlot])
   useEffect(() => {
     getAccounts().then(setAccounts).catch(() => setAccounts([]))
   }, [location])
@@ -117,13 +128,28 @@ export function DashboardListings() {
   )
   const isConnected = (account: string) => connectedAccounts.has(account)
 
-  const setStatus = (listingId: string, status: ListingStatus) =>
-    setListings((current) =>
-      current ? current.map((l) => (l.listingId === listingId ? { ...l, status } : l)) : current
-    )
-
-  const copyLink = async (url: string) => {
+  // Status changes round-trip the API — the store (mock now, facebook
+  // client later) is the source of truth, never local table state.
+  async function handleStatusChange(listing: ListingRecord, status: ListingStatus) {
     try {
+      const res = await setListingStatus(listing.listingId, status)
+      setListings(res.listings)
+      success(
+        status === 'sold' ? `“${listing.title}” marked as sold` : `“${listing.title}” removed`,
+        LISTING_STATUS_LABELS[status]
+      )
+    } catch (err: unknown) {
+      notifyError('Could not update the listing', err instanceof Error ? err.message : 'Something went wrong.')
+    }
+  }
+
+  // Jump the form straight to the details step for this listing.
+  function handleEdit(listing: ListingRecord) {
+    setEditScope(listing)
+    setFormOpen(true)
+  }
+
+  const copyLink = async (url: string) => {    try {
       await navigator.clipboard.writeText(url)
     } catch {
       // Clipboard can be unavailable on non-secure origins; the menu closes
@@ -149,7 +175,7 @@ export function DashboardListings() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="blue" size="lg" shadow="hard" onClick={() => setFormOpen(true)}>
+          <Button type="button" variant="blue" size="lg" shadow="hard" onClick={() => { setEditScope(null); setFormOpen(true) }}>
             <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.25} />
             Add listing
           </Button>
@@ -227,6 +253,12 @@ export function DashboardListings() {
           aria-label="Listing actions"
           items={[
             {
+              id: 'edit',
+              label: 'Edit',
+              icon: <Pencil aria-hidden="true" className="size-4" />,
+              onSelect: () => handleEdit(listing)
+            },
+            {
               id: 'view',
               label: 'View listing',
               icon: <ExternalLink aria-hidden="true" className="size-4" />,
@@ -242,14 +274,14 @@ export function DashboardListings() {
               id: 'sold',
               label: 'Mark as sold',
               icon: <Tag aria-hidden="true" className="size-4" />,
-              onSelect: () => setStatus(listing.listingId, 'sold')
+              onSelect: () => handleStatusChange(listing, 'sold')
             },
             {
               id: 'remove',
               label: 'Remove listing',
               icon: <Trash2 aria-hidden="true" className="size-4" />,
               danger: true,
-              onSelect: () => setStatus(listing.listingId, 'removed')
+              onSelect: () => handleStatusChange(listing, 'removed')
             }
           ]}
         />

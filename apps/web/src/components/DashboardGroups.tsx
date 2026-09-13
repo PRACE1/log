@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { Clock, Plus } from 'lucide-react'
-import { Button, useSquircleClip } from '@listeningkit/ui'
+import { Check, Clock, LayoutGrid, LogOut, Plus, Table2, X } from 'lucide-react'
+import {
+  Badge,
+  Button,
+  Dropdown,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  useSquircleClip
+} from '@listeningkit/ui'
 import { SOCIAL_ICONS, SocialGlyph, type SocialIcon } from '@/lib/social-icons'
 import {
   acceptCommunity,
@@ -9,33 +20,91 @@ import {
   leaveCommunity,
   type Community
 } from '@/lib/communities'
-import { type ConnectionPlatform } from '@/lib/connections'
+import { getAccounts, type ConnectionPlatform, type ConnectionRecord } from '@/lib/connections'
+import { healthForAccountId } from '@/lib/health'
+import { AccountHealthBadge } from './AccountHealthBadge'
 import { DashboardGroupsForm } from './DashboardGroupsForm'
 import { useDashboardFormSlot } from './DashboardFormSlot'
+import { DashboardTab } from './DashboardTab'
 
 function GroupsTab({ icon, active, onClick }: { icon: SocialIcon; active: boolean; onClick: () => void }) {
-  const clip = useSquircleClip<HTMLSpanElement>(9)
-
   return (
-    <button
-      type="button"
+    <DashboardTab
+      label={icon.label}
+      icon={<SocialGlyph icon={icon} className="size-4" />}
+      active={active}
       onClick={onClick}
-      aria-pressed={active}
-      className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold ${
-        active ? 'bg-brand-600/10 text-brand-600' : 'text-text-secondary'
-      }`}
-    >
-      <span ref={clip.ref} style={clip.style} className={`flex size-7 items-center justify-center ${active ? 'bg-[#2A8CFF]' : 'bg-black/5'}`}>
-        <SocialGlyph icon={icon} className={`size-4 ${active ? 'text-white' : 'text-text-secondary'}`} />
-      </span>
-      {icon.label}
-    </button>
+    />
   )
 }
 
 function initials(name: string): string {
   const words = name.replace(/^r\//, '').split(/\s+/)
   return ((words[0]?.[0] ?? '') + (words[1]?.[0] ?? '')).toUpperCase() || '?'
+}
+
+type ViewMode = 'cards' | 'table'
+
+function JoinStateBadge({ community }: { community: Community }) {
+  switch (community.joinState) {
+    case 'accepted':
+      return (
+        <Badge variant="success" dot>
+          Member
+        </Badge>
+      )
+    case 'pending':
+      return <Badge variant="warning">Pending</Badge>
+    default:
+      return <Badge variant="muted">Not joined</Badge>
+  }
+}
+
+function communityActions(
+  community: Community,
+  handlers: {
+    onJoin: (community: Community) => void
+    onLeave: (community: Community) => void
+    onAccept: (community: Community) => void
+    onCancel: (community: Community) => void
+  }
+) {
+  if (community.joinState === 'accepted') {
+    return [
+      {
+        id: 'leave',
+        label: 'Leave',
+        icon: <LogOut aria-hidden="true" className="size-4" />,
+        danger: true,
+        onSelect: () => handlers.onLeave(community)
+      }
+    ]
+  }
+  if (community.joinState === 'pending') {
+    return [
+      {
+        id: 'accept',
+        label: 'Simulate acceptance',
+        icon: <Check aria-hidden="true" className="size-4" />,
+        onSelect: () => handlers.onAccept(community)
+      },
+      {
+        id: 'cancel',
+        label: 'Cancel request',
+        icon: <X aria-hidden="true" className="size-4" />,
+        danger: true,
+        onSelect: () => handlers.onCancel(community)
+      }
+    ]
+  }
+  return [
+    {
+      id: 'join',
+      label: 'Join',
+      icon: <Plus aria-hidden="true" className="size-4" />,
+      onSelect: () => handlers.onJoin(community)
+    }
+  ]
 }
 
 function CommunityCard({
@@ -148,7 +217,9 @@ function CommunitySection({
 export function DashboardGroups() {
   const [platform, setPlatform] = useState<ConnectionPlatform>(SOCIAL_ICONS[0].id as ConnectionPlatform)
   const [communities, setCommunities] = useState<Community[] | null>(null)
+  const [accounts, setAccounts] = useState<ConnectionRecord[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [view, setView] = useState<ViewMode>('cards')
   const [formOpen, setFormOpen] = useState(false)
   const [formScope, setFormScope] = useState<{ platform: ConnectionPlatform; communityId: string } | null>(null)
 
@@ -163,8 +234,16 @@ export function DashboardGroups() {
     load()
   }, [load])
 
-  // The form lives in the layout's third column, not in the page: register
-  // it when open, clear it when closed or when the page unmounts.
+  // The joining account behind each community — the account badges read
+  // their health from this roster, not from the community row itself.
+  useEffect(() => {
+    getAccounts()
+      .then(setAccounts)
+      .catch(() => setAccounts([]))
+  }, [])
+
+  // The form lives in the layout overlay, not in the page: register it
+  // when open, clear it when closed or when the page unmounts.
   const setFormSlot = useDashboardFormSlot()
   useEffect(() => {
     if (!formOpen) {
@@ -187,6 +266,9 @@ export function DashboardGroups() {
   const current = (communities ?? []).filter((c) => c.joinState === 'accepted')
   const pending = (communities ?? []).filter((c) => c.joinState === 'pending')
   const recommended = (communities ?? []).filter((c) => c.joinState === 'none')
+  // Flat table order mirrors the card sections: members, then pending,
+  // then not joined.
+  const all = [...current, ...pending, ...recommended]
 
   async function handleLeave(community: Community) {
     setBusyId(community.id)
@@ -238,10 +320,37 @@ export function DashboardGroups() {
           <h1 className="text-xl font-bold text-text-primary">Groups</h1>
           <p className="text-sm text-text-secondary">Pick the communities ListeningKit watches for you.</p>
         </div>
-        <Button type="button" variant="blue" size="lg" shadow="hard" onClick={() => { setFormScope(null); setFormOpen(true) }}>
-          <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.25} />
-          Add group
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Card / table view switcher — same segmented shape as the keywords page. */}
+          <div className="flex h-9 items-center gap-0.5 rounded-lg border border-black/10 bg-white p-0.5">
+            <button
+              type="button"
+              onClick={() => setView('cards')}
+              aria-pressed={view === 'cards'}
+              className={`flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-medium transition-colors ${
+                view === 'cards' ? 'bg-[#2A8CFF] text-white' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <LayoutGrid className="size-3.5" aria-hidden="true" />
+              Cards
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('table')}
+              aria-pressed={view === 'table'}
+              className={`flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-medium transition-colors ${
+                view === 'table' ? 'bg-[#2A8CFF] text-white' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Table2 className="size-3.5" aria-hidden="true" />
+              Table
+            </button>
+          </div>
+          <Button type="button" variant="blue" size="lg" shadow="hard" onClick={() => { setFormScope(null); setFormOpen(true) }}>
+            <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.25} />
+            Add group
+          </Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {SOCIAL_ICONS.map((icon) => (
@@ -252,7 +361,7 @@ export function DashboardGroups() {
         <p className="rounded-xl bg-black/5 p-4 text-sm text-text-secondary" aria-busy="true">
           Loading {active.label} communities…
         </p>
-      ) : (
+      ) : view === 'cards' ? (
         <>
           <CommunitySection
             title="Your current communities"
@@ -301,6 +410,73 @@ export function DashboardGroups() {
             )}
           </CommunitySection>
         </>
+      ) : all.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-text-secondary">
+          No {active.label} communities tracked yet.
+        </p>
+      ) : (
+        <Table>
+          <table className="w-full min-w-[780px] text-left">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Community</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Account</TableHead>
+                <TableHead>Members</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {all.map((c) => {
+                const health = healthForAccountId(accounts, c.accountId)
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#2A8CFF]/10 text-xs font-bold text-[#2A8CFF]">
+                          {initials(c.name)}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-semibold" title={c.name}>
+                            {c.name}
+                          </span>
+                          <span
+                            className="block truncate text-xs text-text-secondary"
+                            title={`${c.handle} · ${c.members}`}
+                          >
+                            {c.handle} · {c.members}
+                          </span>
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <JoinStateBadge community={c} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {health ? (
+                        <AccountHealthBadge label={c.accountLabel ?? c.accountId ?? ''} health={health} />
+                      ) : (
+                        <span className="text-text-secondary">{c.accountLabel ?? '—'}</span>
+                      )}
+                    </TableCell>
+                  <TableCell className="whitespace-nowrap text-text-secondary">{c.members}</TableCell>
+                    <TableCell className="text-right">
+                      <Dropdown
+                        aria-label={`${c.name} community actions`}
+                        items={communityActions(c, {
+                          onJoin: handleJoin,
+                          onLeave: handleLeave,
+                          onAccept: handleAccept,
+                          onCancel: handleCancelRequest
+                        })}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </table>
+        </Table>
       )}
     </div>
   )

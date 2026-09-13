@@ -2,7 +2,9 @@ import type { ComponentType, MouseEvent, SVGProps } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   ChatBubbleLeftRightIcon,
+  ChartBarIcon,
   Cog6ToothIcon,
+  KeyIcon,
   Squares2X2Icon,
   TagIcon,
   UserCircleIcon,
@@ -17,6 +19,8 @@ const NAV: Array<{ label: string; Icon: NavIcon; to?: string }> = [
   { label: 'Overview', Icon: Squares2X2Icon, to: '/dashboard' },
   { label: 'Groups', Icon: UsersIcon, to: '/dashboard/groups' },
   { label: 'Listings', Icon: TagIcon, to: '/dashboard/facebook/listings' },
+  { label: 'Keywords', Icon: KeyIcon, to: '/dashboard/keywords' },
+  { label: 'Analytics', Icon: ChartBarIcon, to: '/dashboard/analytics' },
   { label: 'Accounts', Icon: UserCircleIcon, to: '/dashboard/accounts' },
   { label: 'Messages', Icon: ChatBubbleLeftRightIcon, to: '/dashboard/messages' },
   { label: 'Settings', Icon: Cog6ToothIcon, to: '/dashboard/settings' },
@@ -153,7 +157,14 @@ export function DashboardSidebar({
             <NavItem
               key={item.label}
               label={item.label}
-              active={item.to ? pathname === item.to : false}
+              // Nested routes (e.g. /dashboard/analytics/:keywordId) keep
+              // their section highlighted — except the index, which would
+              // otherwise match every dashboard path as a prefix.
+              active={
+                item.to
+                  ? pathname === item.to || (item.to !== '/dashboard' && pathname.startsWith(`${item.to}/`))
+                  : false
+              }
               collapsed={collapsed}
               Icon={item.Icon}
               to={item.to}

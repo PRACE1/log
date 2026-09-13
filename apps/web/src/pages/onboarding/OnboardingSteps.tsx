@@ -67,7 +67,7 @@ export function OnboardingSteps() {
           <p className="mt-4 text-lg text-white/85">
             Pick the platforms you care about. We&apos;ll cluster what customers keep repeating.
           </p>
-          <div className="mx-auto mt-8 grid w-full max-w-4xl grid-cols-2 gap-4">
+          <div className="mx-auto mt-8 flex w-full max-w-4xl flex-wrap justify-center gap-4">
             {SOCIAL_ICONS.map((icon) => {
               const active = sources.includes(icon.id)
               return (
@@ -76,7 +76,7 @@ export function OnboardingSteps() {
                   type="button"
                   onClick={() => toggleSource(icon.id)}
                   aria-pressed={active}
-                  className={`h-auto min-h-44 flex-row items-center gap-5 whitespace-normal rounded-3xl border p-6 text-left ${
+                  className={`h-auto min-h-44 w-full flex-row items-center gap-5 whitespace-normal rounded-3xl border p-6 text-left sm:w-[calc(50%-0.5rem)] ${
                     active
                       ? 'border-white bg-white text-[#2a8cff]'
                       : 'border-white/30 bg-white/10 text-white hover:bg-white/20'

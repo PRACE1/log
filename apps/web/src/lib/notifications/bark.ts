@@ -100,3 +100,96 @@ export function saveBarkConfig(config: BarkConfig): void {
     // storage unavailable — config still works for this session
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Multiple connections --------------------------------------------- */
+/* One Bark connection = one server + device key pair. Same route     */
+/* surface as the connections accounts API (get/create/save/delete),  */
+/* backed by localStorage until the notifications backend lands.      */
+
+const LIST_STORAGE_KEY = 'listeningkit.bark.list.v1'
+
+export interface BarkConnection {
+  id: string
+  label: string
+  server: string
+  deviceKey: string
+}
+
+export const DEFAULT_BARK_LABEL = 'Bark push'
+
+function barkConnectionId(): string {
+  return `bark-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function readList(): BarkConnection[] {
+  try {
+    const raw = window.localStorage.getItem(LIST_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((entry): entry is BarkConnection => {
+            if (typeof entry !== 'object' || entry === null) return false
+            const record = entry as Record<string, unknown>
+            return typeof record.id === 'string'
+          })
+          .map((entry) => ({
+            id: entry.id,
+            label: typeof entry.label === 'string' && entry.label ? entry.label : DEFAULT_BARK_LABEL,
+            server: typeof entry.server === 'string' ? entry.server : '',
+            deviceKey: typeof entry.deviceKey === 'string' ? entry.deviceKey : '',
+          }))
+      }
+    }
+  } catch {
+    // fall through to seeding
+  }
+  // First run: migrate the legacy single config into the list.
+  const legacy = loadBarkConfig()
+  const seeded: BarkConnection[] = legacy.deviceKey.trim()
+    ? [{ id: barkConnectionId(), label: DEFAULT_BARK_LABEL, server: legacy.server, deviceKey: legacy.deviceKey }]
+    : []
+  writeList(seeded)
+  return seeded
+}
+
+function writeList(list: BarkConnection[]): void {
+  try {
+    window.localStorage.setItem(LIST_STORAGE_KEY, JSON.stringify(list))
+  } catch {
+    // storage unavailable — list still works for this session
+  }
+}
+
+/** List every Bark connection (seeds from the legacy single config once). */
+export async function getBarkConnections(): Promise<BarkConnection[]> {
+  return readList()
+}
+
+/** Add a fresh, not-yet-configured connection. */
+export async function createBarkConnection(): Promise<BarkConnection> {
+  const record: BarkConnection = { id: barkConnectionId(), label: DEFAULT_BARK_LABEL, server: '', deviceKey: '' }
+  const list = readList()
+  list.push(record)
+  writeList(list)
+  return record
+}
+
+/** Upsert one connection (matched by id). */
+export async function saveBarkConnection(record: BarkConnection): Promise<BarkConnection[]> {
+  const list = readList()
+  const index = list.findIndex((c) => c.id === record.id)
+  if (index === -1) return list
+  list[index] = { ...record, id: list[index].id }
+  writeList(list)
+  return [...list]
+}
+
+/** Delete a connection by id. */
+export async function deleteBarkConnection(id: string): Promise<BarkConnection[]> {
+  const list = readList()
+  const next = list.filter((c) => c.id !== id)
+  writeList(next)
+  return next
+}

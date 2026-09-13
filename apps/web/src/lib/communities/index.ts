@@ -5,7 +5,7 @@ import type { ConnectionPlatform } from '../connections'
 export type { Community, CommunityJoinState } from './types'
 export { communitiesApp, type CommunitiesApp } from './server'
 export { COMMUNITIES_BASE, SEED_JOINED, resolveAccountLabel } from './mock'
-export { parseFacebookGroupUrl } from './mock'
+export { parseFacebookGroupUrl, parseSubredditName } from './mock'
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
   return communitiesApp.request(path, init)
@@ -81,6 +81,24 @@ export async function resolveCommunityByUrl(url: string): Promise<Community> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null
     throw new Error(body?.error ?? `Could not resolve the group (${res.status})`)
+  }
+  return ((await res.json()) as { community: Community }).community
+}
+
+/**
+ * Resolve a typed subreddit through `POST /communities/resolve-reddit` —
+ * unknown names register and join immediately (subreddits don't gate), so
+ * the returned community is always usable as a keyword scope.
+ */
+export async function resolveRedditCommunity(name: string): Promise<Community> {
+  const res = await request('/communities/resolve-reddit', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error ?? `Could not resolve the subreddit (${res.status})`)
   }
   return ((await res.json()) as { community: Community }).community
 }

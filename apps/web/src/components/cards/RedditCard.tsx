@@ -1,7 +1,9 @@
+import { Fragment } from 'react'
+import { highlightQuote } from './QuoteHighlight'
+
 /**
  * from Paper
- * https://app.paper.design/file/01M1DEEQY42BZFA01XT004M9ZZ/01K4GP58P8JRM8PGBP0586VKYV/16V-0
- * on Sep 12, 2026
+ * https://app.paper.design/file/01M1DEEQY42BZFA01XT004M9ZZ/01K4GP58P8JRM8PGBP0586VKYV/16V-0 * on Sep 12, 2026
  *
  * NOTE: Paper exports Tailwind v4 utilities; this app runs Tailwind v3.4, so
  * v4-only classes are converted to v3 arbitrary-value equivalents with the
@@ -25,11 +27,14 @@ export function RedditPostText({
   title = 'Edit This Text!',
   likes = '999+',
   shares = '999+',
+  highlight = [],
 }: {
   communityName?: string
   title?: string
   likes?: string
   shares?: string
+  /** Listened phrases to quote-highlight inside the title. */
+  highlight?: string[]
 }) {
   return (
     <div className="[font-synthesis:none] [overflow-wrap:anywhere] w-[54rem] flex flex-col items-start p-10 rounded-[30px] gap-[1.5625rem] filter-[drop-shadow(#0000000D_0px_0px_6px)] bg-white antialiased">
@@ -60,7 +65,7 @@ export function RedditPostText({
       </div>
       <div className="self-stretch min-w-0 flex flex-col items-start gap-2.5">
         <div className="w-[49rem] self-stretch min-w-0 text-[54px] leading-[4.1875rem] line-clamp-2 font-['Satoshi',system-ui,sans-serif] font-[700] [font-feature-settings:'case'] text-black">
-          {title}
+          {highlightQuote(title, highlight)}
         </div>
         <div className="self-stretch min-w-0 flex items-center justify-between pt-[0.9375rem]">
           <div className="flex items-center pr-10 pl-[0.1875rem] overflow-clip gap-[1.125rem]">
@@ -102,11 +107,14 @@ export function RedditComment({
   body = 'This is a comment',
   likes = '999+',
   shares = '999+',
+  highlight = [],
 }: {
   authorName?: string
   body?: string
   likes?: string
   shares?: string
+  /** Listened phrases to quote-highlight inside the body. */
+  highlight?: string[]
 }) {
   return (
     <div className="[font-synthesis:none] [overflow-wrap:anywhere] w-[54rem] flex flex-col items-start p-10 rounded-[30px] gap-[1.5625rem] filter-[drop-shadow(#0000000D_0px_0px_6px)] bg-white antialiased">
@@ -125,7 +133,7 @@ export function RedditComment({
       </div>
       <div className="self-stretch min-w-0 flex flex-col items-start gap-2.5">
         <div className="w-[49rem] self-stretch min-w-0 text-[54px] leading-[4.1875rem] line-clamp-2 font-['Satoshi',system-ui,sans-serif] font-[700] [font-feature-settings:'case'] text-black">
-          {body}
+          {highlightQuote(body, highlight)}
         </div>
         <div className="self-stretch min-w-0 flex items-center justify-between pt-[0.9375rem]">
           <div className="flex items-center pr-10 pl-[0.1875rem] overflow-clip gap-[1.125rem]">
@@ -175,6 +183,8 @@ export type RedditPostProps = {
   upvotes?: number
   comments?: number
   className?: string
+  /** Listened phrases to quote-highlight inside title and lines. */
+  highlight?: string[]
 }
 
 export function RedditCard({
@@ -188,7 +198,8 @@ export function RedditCard({
   imageAlt = 'Post image',
   upvotes = 0,
   comments = 0,
-  className = ''
+  className = '',
+  highlight = []
 }: RedditPostProps) {
   return (
     <div className={`flex flex-col gap-3 rounded-[21.78px] bg-white p-5 antialiased [box-shadow:#0000000D_0px_14px_14px_9px] ${className}`}>
@@ -199,8 +210,17 @@ export function RedditCard({
           Posted by {authorName} {timeAgo} ago
         </span>
       </div>
-      <p className="text-xl font-bold text-[#1C1E21]">{title}</p>
-      {lines.length > 0 && <p className="whitespace-pre-line text-[16px] leading-6 text-[#1C1C22]">{lines.join('\n')}</p>}
+      <p className="text-xl font-bold text-[#1C1E21]">{highlightQuote(title, highlight)}</p>
+      {lines.length > 0 && (
+        <p className="whitespace-pre-line text-[16px] leading-6 text-[#1C1C22]">
+          {lines.map((line, index) => (
+            <Fragment key={index}>
+              {index > 0 && <br />}
+              {highlightQuote(line, highlight)}
+            </Fragment>
+          ))}
+        </p>
+      )}
       {variant === 'image' &&
         (imageSrc ? (
           <img src={imageSrc} alt={imageAlt} className="max-h-[480px] w-full rounded-xl object-cover" />

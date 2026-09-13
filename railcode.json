@@ -1,0 +1,5 @@
+{
+  "app": "listeningkit",
+  "build": "pnpm --filter web build",
+  "dist": "apps/web/dist"
+}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, Clock } from 'lucide-react'
 import {
   cn,
+  Select,
   Spinner,
   useSquircleClip,
   useToast
@@ -424,12 +425,20 @@ export function DashboardGroupsForm({
           <LoadingLine label={`Loading ${platformLabel(platform)} communities…`} />
         ) : (
           <div className="flex flex-col gap-4">
-            <GroupPick
-              platform={platform}
-              communities={joinable}
-              value={communityId}
-              onSelect={setCommunityId}
-            />
+            {platform === 'reddit' ? (
+              <RedditGroupPick
+                communities={joinable}
+                value={communityId}
+                onSelect={setCommunityId}
+              />
+            ) : (
+              <GroupPick
+                platform={platform}
+                communities={joinable}
+                value={communityId}
+                onSelect={setCommunityId}
+              />
+            )}
             <RelationLists pending={pending} accepted={accepted} />
           </div>
         )
@@ -493,7 +502,7 @@ function AccountCard({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'relative flex items-center gap-4 p-4 text-left transition-colors',
+        'relative flex items-center gap-4 p-4 text-left',
         active ? 'bg-[#F4F9FF]' : 'bg-white hover:bg-black/[0.02]'
       )}
     >
@@ -667,6 +676,45 @@ function RelationLists({ pending, accepted }: { pending: Community[]; accepted: 
         </p>
       ))}
     </div>
+  )
+}
+
+/**
+ * The reddit group step picks from a dropdown instead of rows — same
+ * selection semantics (marks only, Join acts), just the Select surface.
+ */
+function RedditGroupPick({
+  communities,
+  value,
+  onSelect
+}: {
+  communities: Community[]
+  value: string | null
+  onSelect: (id: string) => void
+}) {
+  if (communities.length === 0) {
+    return (
+      <EmptyLine
+        label={`You're already in every ${platformLabel('reddit')} group we track.`}
+      />
+    )
+  }
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-slate-700">Subreddit</span>
+      <Select
+        value={value ?? undefined}
+        onChange={onSelect}
+        aria-label="Subreddit to join"
+        placeholder="Pick a subreddit…"
+        icon={<SocialGlyph icon={iconFor('reddit')} className="size-4" />}
+        options={communities.map((community) => ({
+          value: community.id,
+          label: `${community.name} · ${community.members}`,
+          icon: <SocialBadge icon={iconFor(community.platform)} variant="blue" />
+        }))}
+      />
+    </label>
   )
 }
 

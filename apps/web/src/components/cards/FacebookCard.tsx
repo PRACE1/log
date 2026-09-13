@@ -9,6 +9,7 @@
  */
 
 import { Fragment } from 'react'
+import { highlightQuote } from './QuoteHighlight'
 
 export type FacebookPostVariant = 'image' | 'text'
 
@@ -27,6 +28,8 @@ export type FacebookPostProps = {
   comments?: number
   shares?: number
   className?: string
+  /** Listened phrases to quote-highlight inside the lines. */
+  highlight?: string[]
 }
 
 const DEFAULT_LINES = [
@@ -157,7 +160,8 @@ export function FacebookCard({
   likes = 4,
   comments = 0,
   shares = 5,
-  className = ''
+  className = '',
+  highlight = []
 }: FacebookPostProps) {
   return (
     <div className={`[font-synthesis:none] [overflow-wrap:anywhere] flex flex-col items-center py-[16.34px] rounded-[21.7838px] overflow-clip gap-[13.61px] justify-center [box-shadow:#0000000D_0px_14px_14px_9px] bg-white antialiased ${className}`}>
@@ -195,7 +199,12 @@ export function FacebookCard({
             </div>
           </div>
           <div className="text-[19.06px] self-stretch min-w-0 text-left leading-[27.2298px] whitespace-pre line-clamp-3 font-['Satoshi',system-ui,sans-serif] text-[#1C1C22]">
-            {lines.join('\n')}
+            {lines.map((line, index) => (
+              <Fragment key={index}>
+                {index > 0 && <br />}
+                {highlightQuote(line, highlight)}
+              </Fragment>
+            ))}
           </div>
         </div>
         {variant === 'image' && (
@@ -262,6 +271,8 @@ export type FacebookPaperProps = {
   likes?: string
   comments?: string
   shares?: string
+  /** Listened phrases to quote-highlight inside the body. */
+  highlight?: string[]
 }
 
 const FACEBOOK_PAPER_AVATAR =
@@ -272,13 +283,13 @@ const FACEBOOK_PAPER_LINES = [
   'If you have a moment, we’d truly appreciate a like!'
 ]
 
-function FacebookPaperBody({ lines }: { lines: string[] }) {
+function FacebookPaperBody({ lines, highlight = [] }: { lines: string[]; highlight?: string[] }) {
   return (
     <div className="text-[19.06px] content-center leading-[27.2298px] w-max whitespace-pre line-clamp-3 font-['Satoshi',system-ui,sans-serif] text-[#1C1C22]">
       {lines.map((line, i) => (
         <Fragment key={i}>
           {i > 0 && <br />}
-          {line}
+          {highlightQuote(line, highlight)}
         </Fragment>
       ))}
     </div>
@@ -382,14 +393,15 @@ export function FacebookPostText({
   avatarUrl = FACEBOOK_PAPER_AVATAR,
   likes = '650',
   comments = '48 comments',
-  shares = '135 shares'
+  shares = '135 shares',
+  highlight = []
 }: FacebookPaperProps) {
   return (
     <div className="[font-synthesis:none] [overflow-wrap:anywhere] w-[713.42px] flex flex-col items-start py-[16.34px] rounded-[21.7838px] overflow-clip gap-[13.61px] bg-white antialiased">
       <div className="self-stretch min-w-0 flex flex-col items-center gap-[21.78px]">
         <div className="self-stretch min-w-0 flex flex-col items-start px-[16.34px] gap-[10.89px]">
           <FacebookPaperHeader authorName={authorName} timeAgo={timeAgo} avatarUrl={avatarUrl} />
-          <FacebookPaperBody lines={lines} />
+          <FacebookPaperBody lines={lines} highlight={highlight} />
         </div>
         <FacebookPaperFooter likes={likes} comments={comments} shares={shares} />
       </div>
@@ -408,14 +420,15 @@ export function FacebookPostImage({
   avatarUrl = FACEBOOK_PAPER_AVATAR,
   likes = '650',
   comments = '48 comments',
-  shares = '135 shares'
+  shares = '135 shares',
+  highlight = []
 }: FacebookPaperProps) {
   return (
     <div className="[font-synthesis:none] [overflow-wrap:anywhere] w-[713.42px] flex flex-col items-start py-[16.34px] rounded-[21.7838px] overflow-clip gap-[13.61px] bg-white antialiased">
       <div className="self-stretch min-w-0 flex flex-col items-center gap-[21.78px]">
         <div className="self-stretch min-w-0 flex flex-col items-start px-[16.34px] gap-[10.89px]">
           <FacebookPaperHeader authorName={authorName} timeAgo={timeAgo} avatarUrl={avatarUrl} />
-          <FacebookPaperBody lines={lines} />
+          <FacebookPaperBody lines={lines} highlight={highlight} />
         </div>
         {imageSrc ? (
           <div

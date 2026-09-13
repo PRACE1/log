@@ -116,6 +116,9 @@ export async function connectAccount(
     label: existing?.label ?? platformLabel(input.platform),
     viaProxy: proxy !== undefined,
     connectedAt: new Date().toISOString(),
+    lastIssue: null,
+    lastCheckedAt: new Date().toISOString(),
+    retryAfter: null,
   }
   await saveAccount(record)
   return record
@@ -126,5 +129,5 @@ export async function disconnectAccount(id: string): Promise<ConnectionRecord[]>
   const accounts = await getAccounts()
   const existing = accounts.find((a) => a.id === id)
   if (!existing) return deleteAccount(id)
-  return saveAccount({ ...existing, viaProxy: false, connectedAt: null })
+  return saveAccount({ ...existing, viaProxy: false, connectedAt: null, lastIssue: 'disconnected', rawSignal: null })
 }

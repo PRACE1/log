@@ -1,23 +1,39 @@
 import { Hono } from 'hono'
-import { communitiesApp } from '../communities'
+import { communitiesApp, type CommunityJoinState } from '../communities'
 import type { ConnectionPlatform } from '../connections'
 import { keywordId, SEED_KEYWORDS } from './mock'
 import type { CreateKeywordInput, Keyword } from './types'
+import { isArray, isRecord, loadPersistedState, savePersistedState } from '../persist'
+
+const KEYWORDS_KEY = 'keywords'
+
+function isKeywordArray(value: unknown): value is Keyword[] {
+  return (
+    isArray(value) &&
+    value.every((row) => isRecord(row) && typeof (row as { id?: unknown }).id === 'string')
+  )
+}
 
 /**
  * In-memory keyword store. Seeds from SEED_KEYWORDS; every route validates
  * the platform ↔ group relation before writing:
  *  - facebook / reddit keywords must be scoped to a joined community
  *  - x keywords are word-based and must carry no group
+ * Persisted to localStorage on every write and rehydrated on load, so
+ * creates, edits, pauses and deletes survive a refresh.
  */
-let keywords: Keyword[] = [...SEED_KEYWORDS]
+let keywords: Keyword[] = loadPersistedState(KEYWORDS_KEY, isKeywordArray) ?? [...SEED_KEYWORDS]
 
-/** Joined communities for a platform, straight from the communities app. */
+function persistKeywords(): void {
+  savePersistedState(KEYWORDS_KEY, keywords)
+}
+
+/** Accepted communities for a platform, straight from the communities app. */
 async function joinedGroupsFor(platform: ConnectionPlatform) {
   const res = await communitiesApp.request(`/communities?platform=${platform}`)
   if (!res.ok) return []
-  const body = (await res.json()) as { communities: Array<{ id: string; joined: boolean }> }
-  return body.communities.filter((community) => community.joined)
+  const body = (await res.json()) as { communities: Array<{ id: string; joinState: CommunityJoinState }> }
+  return body.communities.filter((community) => community.joinState === 'accepted')
 }
 
 export const keywordsApp = new Hono()
@@ -70,21 +86,53 @@ export const keywordsApp = new Hono()
     )
     if (dupe) return c.json({ error: 'That keyword already exists in this group' }, 409)
     keywords = [...keywords, record]
+    persistKeywords()
     return c.json({ keyword: record, keywords: [...keywords] }, 201)
   })
   .patch('/keywords/:id', async (c) => {
+    // The body is the form's shape: phrase, scope and status may all move
+    // in one save. Platform is fixed — a keyword never changes platform.
     const id = c.req.param('id')
     const body = await c.req.json<Partial<Keyword>>().catch(() => null)
     const existing = keywords.find((keyword) => keyword.id === id)
     if (!existing || !body) return c.json({ error: 'Keyword not found' }, 404)
-    const next: Keyword = { ...existing, ...body, id: existing.id, platform: existing.platform }
-    // Status is the only field a saved keyword may change.
-    keywords = keywords.map((keyword) => (keyword.id === id ? { ...keyword, status: next.status } : keyword))
-    return c.json({ keywords: [...keywords] })
+    const phrase = body.phrase !== undefined ? body.phrase.trim() : existing.phrase
+    if (!phrase) return c.json({ error: 'A keyword needs a phrase' }, 400)
+    const status = body.status ?? existing.status
+    if (status !== 'listening' && status !== 'paused') {
+      return c.json({ error: 'status must be listening or paused' }, 400)
+    }
+    const groupId = body.groupId !== undefined ? body.groupId : existing.groupId
+    if (existing.platform === 'x') {
+      if (groupId) return c.json({ error: 'X keywords are word-based and have no group' }, 400)
+    } else {
+      const joined = await joinedGroupsFor(existing.platform)
+      if (!groupId || !joined.some((group) => group.id === groupId)) {
+        return c.json(
+          { error: `${existing.platform === 'facebook' ? 'Facebook' : 'Reddit'} keywords must be scoped to a joined group` },
+          400
+        )
+      }
+    }
+    // Duplicates within the same scope, excluding the row itself — saving a
+    // record unchanged must never 409 against itself.
+    const dupe = keywords.find(
+      (other) =>
+        other.id !== id &&
+        other.platform === existing.platform &&
+        other.groupId === groupId &&
+        other.phrase.toLowerCase() === phrase.toLowerCase()
+    )
+    if (dupe) return c.json({ error: 'That keyword already exists in this group' }, 409)
+    const next: Keyword = { ...existing, phrase, groupId, status }
+    keywords = keywords.map((keyword) => (keyword.id === id ? next : keyword))
+    persistKeywords()
+    return c.json({ keyword: next, keywords: [...keywords] })
   })
   .delete('/keywords/:id', (c) => {
     const id = c.req.param('id')
     keywords = keywords.filter((keyword) => keyword.id !== id)
+    persistKeywords()
     return c.json({ keywords: [...keywords] })
   })
 

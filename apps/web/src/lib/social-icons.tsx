@@ -29,7 +29,7 @@ export type SocialBadgeVariant = 'white' | 'blue'
 export function SocialBadge({
   icon,
   variant = 'white',
-  className,
+  className
 }: {
   icon: SocialIcon
   variant?: SocialBadgeVariant
@@ -46,7 +46,9 @@ export function SocialBadge({
       title={icon.label}
       ref={setRef}
       style={clip.style}
-      className={`relative flex size-8 items-center justify-center ${className ?? ''}`}
+      // Fixed-size icon: never flex-shrink, or the box distorts (e.g. 28×32
+      // inside a 28px parent) and the squircle measures the wrong geometry.
+      className={`relative flex size-8 shrink-0 items-center justify-center ${className ?? ''}`}
     >
       <svg
         width={border.state.width}

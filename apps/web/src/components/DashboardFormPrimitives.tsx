@@ -38,11 +38,14 @@ export const SQUIRCLE_ACTIVE_STROKE = ACTIVE_STROKE
 export function SquircleStroke({
   border,
   stroke,
-  strokeWidth = 1.5
+  strokeWidth = 1.5,
+  transitionStroke = true
 }: {
   border: SquircleBorderState
   stroke: string
   strokeWidth?: number
+  /** Card selects snap — pass false so the stroke flips immediately too. */
+  transitionStroke?: boolean
 }) {
   if (!border.path) return null
   return (
@@ -58,7 +61,7 @@ export function SquircleStroke({
         fill="none"
         stroke={stroke}
         strokeWidth={strokeWidth}
-        style={{ transition: 'stroke 150ms ease, stroke-width 150ms ease' }}
+        style={transitionStroke ? { transition: 'stroke 150ms ease, stroke-width 150ms ease' } : undefined}
       />
     </svg>
   )
@@ -113,7 +116,7 @@ function PlatformTile({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'relative flex items-center gap-4 p-4 text-left transition-colors',
+        'relative flex items-center gap-4 p-4 text-left',
         active ? 'bg-[#2A8CFF]' : 'bg-white hover:bg-black/[0.02]'
       )}
     >
@@ -121,6 +124,7 @@ function PlatformTile({
         border={border.state}
         stroke={active ? '#FFFFFF' : NEUTRAL_STROKE}
         strokeWidth={active ? 2 : 1.5}
+        transitionStroke={false}
       />
       <SocialGlyph
         icon={icon}
@@ -143,17 +147,26 @@ export function PickRow({
   onClick,
   label,
   sub,
-  icon
+  icon,
+  tone = 'tint'
 }: {
   active: boolean
   onClick: () => void
   label: string
   sub?: string
   icon: ReactNode
+  /**
+   * Active styling: `tint` (default) washes the row light blue and adds a
+   * check badge; `solid` flips the whole card blue with white text like the
+   * step-1 platform tiles (no check badge — pass a colorless glyph so it
+   * follows the row: blue idle, white picked).
+   */
+  tone?: 'tint' | 'solid'
 }) {
   const clip = useSquircleClip<HTMLButtonElement>(14)
   const border = useSquircleBorder<HTMLButtonElement>(15)
   const setRef = useComposedRef(clip.ref, border.ref)
+  const solid = tone === 'solid'
   return (
     <button
       ref={setRef}
@@ -162,28 +175,54 @@ export function PickRow({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'relative flex items-center gap-3 px-3 py-3 text-left transition-colors',
-        active ? 'bg-[#F4F9FF]' : 'bg-white hover:bg-black/[0.02]'
+        'relative flex items-center gap-3 px-3 py-3 text-left',
+        active ? (solid ? 'bg-[#2A8CFF]' : 'bg-[#F4F9FF]') : 'bg-white hover:bg-black/[0.02]'
       )}
     >
       <SquircleStroke
         border={border.state}
-        stroke={active ? ACTIVE_STROKE : NEUTRAL_STROKE}
+        stroke={active ? (solid ? '#FFFFFF' : ACTIVE_STROKE) : NEUTRAL_STROKE}
         strokeWidth={active ? 2 : 1.5}
+        transitionStroke={false}
       />
-      <span className="relative z-10 shrink-0">{icon}</span>
-      <span className="relative z-10 min-w-0 flex-1">
-        <span className="block truncate font-semibold text-text-primary">{label}</span>
-        {sub ? <span className="block truncate text-xs text-text-secondary">{sub}</span> : null}
-      </span>
       <span
         className={cn(
-          'relative z-10 flex size-5 shrink-0 items-center justify-center rounded-full border',
-          active ? 'border-[#2A8CFF] bg-[#2A8CFF] text-white' : 'border-black/20 text-transparent'
+          'relative z-10 shrink-0',
+          solid && (active ? 'text-white' : 'text-[#2A8CFF]')
         )}
       >
-        <Check size={12} strokeWidth={3} aria-hidden="true" />
+        {icon}
       </span>
+      <span className="relative z-10 min-w-0 flex-1">
+        <span
+          className={cn(
+            'block truncate font-semibold',
+            active ? (solid ? 'text-white' : 'text-text-primary') : 'text-text-primary'
+          )}
+        >
+          {label}
+        </span>
+        {sub ? (
+          <span
+            className={cn(
+              'block truncate text-xs',
+              active && solid ? 'text-white/75' : 'text-text-secondary'
+            )}
+          >
+            {sub}
+          </span>
+        ) : null}
+      </span>
+      {solid ? null : (
+        <span
+          className={cn(
+            'relative z-10 flex size-5 shrink-0 items-center justify-center rounded-full border',
+            active ? 'border-[#2A8CFF] bg-[#2A8CFF] text-white' : 'border-black/20 text-transparent'
+          )}
+        >
+          <Check size={12} strokeWidth={3} aria-hidden="true" />
+        </span>
+      )}
     </button>
   )
 }
@@ -197,10 +236,14 @@ export function FormInput({
   className,
   onFocus,
   onBlur,
+  radius = 14,
   ...props
-}: Omit<InputHTMLAttributes<HTMLInputElement>, 'ref'>) {
-  const clip = useSquircleClip<HTMLInputElement>(14)
-  const border = useSquircleBorder<HTMLInputElement>(15)
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'ref'> & {
+  /** Squircle radius — defaults to 14; pass 8 to match button rounding. */
+  radius?: number
+}) {
+  const clip = useSquircleClip<HTMLInputElement>(radius)
+  const border = useSquircleBorder<HTMLInputElement>(radius + 1)
   const setRef = useComposedRef(clip.ref, border.ref)
   const [focused, setFocused] = useState(false)
   return (

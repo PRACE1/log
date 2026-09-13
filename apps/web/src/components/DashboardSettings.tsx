@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import type { ComponentType, SVGProps } from 'react'
 import { BellIcon, CreditCardIcon, LinkIcon } from '@heroicons/react/24/outline'
-import { useSquircleClip } from '@listeningkit/ui'
 import { DashboardSettingsConnections } from './DashboardSettingsConnections'
 import { DashboardSettingsNotifications } from './DashboardSettingsNotifications'
+import { DashboardTab } from './DashboardTab'
 
 type TabIcon = ComponentType<SVGProps<SVGSVGElement>>
 type SettingsTabId = 'connections' | 'notifications'
@@ -19,30 +19,18 @@ function SettingsTab({
   Icon: TabIcon
   onClick?: () => void
 }) {
-  const clip = useSquircleClip<HTMLSpanElement>(9)
-
-  const inner = (
-    <>
-      <span ref={clip.ref} style={clip.style} className={`flex size-7 items-center justify-center ${active ? 'bg-[#2A8CFF]' : 'bg-black/5'}`}>
-        <Icon aria-hidden="true" className={`size-4 ${active ? 'text-white' : 'text-text-secondary'}`} />
-      </span>
-      {label}
-      {!onClick && (
-        <span className="rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-bold">Soon</span>
-      )}
-    </>
-  )
-
-  const className = `flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold ${
-    active ? 'bg-brand-600/10 text-brand-600' : 'text-text-secondary'
-  }`
-
-  return onClick ? (
-    <button type="button" onClick={onClick} aria-pressed={active} className={className}>
-      {inner}
-    </button>
-  ) : (
-    <span className={className}>{inner}</span>
+  return (
+    <DashboardTab
+      label={label}
+      icon={<Icon aria-hidden="true" className="size-4" />}
+      active={active}
+      onClick={onClick}
+      endAdornment={
+        !onClick ? (
+          <span className="rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-bold">Soon</span>
+        ) : undefined
+      }
+    />
   )
 }
 

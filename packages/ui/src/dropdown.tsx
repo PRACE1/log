@@ -223,7 +223,7 @@ const DropdownMenuSurface = React.forwardRef<HTMLDivElement, SurfaceProps>(funct
       onUpdate={syncClip}
       onAnimationStart={syncClip}
       onAnimationComplete={syncClip}
-      className="w-full overflow-hidden bg-white"
+      className="z-50 w-full overflow-hidden bg-white"
     >
       <div ref={border.ref} aria-hidden="true" className="relative">
         <svg

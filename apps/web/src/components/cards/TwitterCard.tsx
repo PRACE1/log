@@ -11,6 +11,9 @@
  * leading-7.5 -> leading-[1.875rem], h-63.5 -> h-[15.875rem].
  */
 
+import { Fragment } from 'react'
+import { highlightQuote } from './QuoteHighlight'
+
 export type TwitterPostVariant = 'image' | 'text'
 
 export type TwitterPostProps = {
@@ -25,6 +28,8 @@ export type TwitterPostProps = {
   reposts?: number
   likes?: number
   className?: string
+  /** Listened phrases to quote-highlight inside the lines. */
+  highlight?: string[]
 }
 
 export function TwitterCard({
@@ -38,7 +43,8 @@ export function TwitterCard({
   replies = 0,
   reposts = 0,
   likes = 0,
-  className = ''
+  className = '',
+  highlight = []
 }: TwitterPostProps) {
   return (
     <div className={`flex gap-3 rounded-[21.78px] bg-white p-5 antialiased [box-shadow:#0000000D_0px_14px_14px_9px] ${className}`}>
@@ -52,7 +58,16 @@ export function TwitterCard({
             {handle} · {timeAgo}
           </span>
         </div>
-        {lines.length > 0 && <p className="whitespace-pre-line text-[16px] leading-6 text-[#0F1419]">{lines.join('\n')}</p>}
+        {lines.length > 0 && (
+          <p className="whitespace-pre-line text-[16px] leading-6 text-[#0F1419]">
+            {lines.map((line, index) => (
+              <Fragment key={index}>
+                {index > 0 && <br />}
+                {highlightQuote(line, highlight)}
+              </Fragment>
+            ))}
+          </p>
+        )}
         {variant === 'image' &&
           (imageSrc ? (
             <img src={imageSrc} alt={imageAlt} className="mt-1 max-h-[420px] w-full rounded-2xl border border-slate-200 object-cover" />
@@ -91,6 +106,7 @@ export function TwitterPostText({
   replies = '999',
   reposts = '999',
   likes = '999',
+  highlight = [],
 }: {
   avatarUrl?: string
   authorName?: string
@@ -101,6 +117,8 @@ export function TwitterPostText({
   replies?: string
   reposts?: string
   likes?: string
+  /** Listened phrases to quote-highlight inside the body. */
+  highlight?: string[]
 }) {
   return (
     <div className="[font-synthesis:none] [overflow-wrap:anywhere] w-[30.25rem] flex flex-col items-start p-4 rounded-[16px] gap-4 bg-white antialiased">
@@ -132,7 +150,7 @@ export function TwitterPostText({
         </svg>
       </div>
       <div className="w-[28.25rem] self-stretch min-w-0 text-[24px] tracking-[-0.01em] line-clamp-3 font-['Satoshi',system-ui,sans-serif] font-[300] leading-[1.875rem] text-black">
-        {body}
+        {highlightQuote(body, highlight)}
       </div>
       <div className="w-[28.25rem] self-stretch min-w-0 text-[12px] tracking-[-0.01em] font-['Satoshi',system-ui,sans-serif] font-[300] leading-4 text-black">
         {timestamp}
@@ -208,6 +226,7 @@ export function TwitterPostImage({
   replies = '999',
   reposts = '999',
   likes = '999',
+  highlight = [],
 }: {
   avatarUrl?: string
   authorName?: string
@@ -219,6 +238,8 @@ export function TwitterPostImage({
   replies?: string
   reposts?: string
   likes?: string
+  /** Listened phrases to quote-highlight inside the body. */
+  highlight?: string[]
 }) {
   return (
     <div className="[font-synthesis:none] [overflow-wrap:anywhere] w-[30.25rem] flex flex-col items-start p-4 rounded-[16px] gap-4 bg-white antialiased">
@@ -250,7 +271,7 @@ export function TwitterPostImage({
         </svg>
       </div>
       <div className="w-[28.25rem] self-stretch min-w-0 text-[24px] tracking-[-0.01em] line-clamp-3 font-['Satoshi',system-ui,sans-serif] font-[300] leading-[1.875rem] text-black">
-        {body}
+        {highlightQuote(body, highlight)}
       </div>
       <div className="w-[28.25rem] h-[15.875rem] rounded-[8px] overflow-clip shrink-0 bg-cover bg-position-[50%]" style={{ backgroundImage: `url(${imageSrc})` }} />
       <div className="w-[28.25rem] self-stretch min-w-0 text-[12px] tracking-[-0.01em] font-['Satoshi',system-ui,sans-serif] font-[300] leading-4 text-black">

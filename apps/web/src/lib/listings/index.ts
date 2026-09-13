@@ -26,6 +26,45 @@ export async function getListingStatus(listingId: string): Promise<ListingStatus
 }
 
 /**
+ * Save a listing's details/photos through `PATCH /listings/:listingId`.
+ * Id, url, timestamps and review status stay put — returns the updated row.
+ */
+export async function saveListing(listingId: string, draft: ListingDraft): Promise<ListingRecord> {
+  const res = await listingsApp.request(`/listings/${listingId}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(draft),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error ?? `Could not save the listing (${res.status})`)
+  }
+  const parsed = (await res.json()) as ListingCreatedResponse
+  return parsed.listing
+}
+
+/**
+ * Move a listing to a new status through `PATCH /listings/:listingId/status`.
+ * Row actions (sold / remove) round-trip here — the store stays the source
+ * of truth instead of local table state. Returns the full roster.
+ */
+export async function setListingStatus(
+  listingId: string,
+  status: ListingRecord['status']
+): Promise<ListingCreatedResponse> {
+  const res = await listingsApp.request(`/listings/${listingId}/status`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error ?? `Could not update the listing (${res.status})`)
+  }
+  return (await res.json()) as ListingCreatedResponse
+}
+
+/**
  * Publish a new listing through `POST /listings`. Returns the created row
  * (status `under-review` until the client clears it).
  */

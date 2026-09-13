@@ -1,0 +1,4 @@
+# ListeningKit hackathon dashboard — pure static frontend (all platform
+# clients are in-browser mocks). No worker capabilities are used, so the
+# manifest declares the app principal and nothing else.
+run_as: app

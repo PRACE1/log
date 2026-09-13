@@ -179,6 +179,57 @@ function titleFromSlug(slug: string): string {
     .join(' ')
 }
 
+export interface ParsedSubreddit {  /** Canonical `r/Name` handle (original casing kept for display). */
+  name: string
+  /** Lowercase key for catalog matching. */
+  key: string
+  /** Canonical `https://reddit.com/r/Name` link. */
+  url: string
+}
+
+/**
+ * Parse a typed subreddit into its canonical form. Accepts `r/Name`,
+ * bare `Name`, and full `reddit.com/r/Name` links — anything else returns
+ * null so the form can flag it.
+ */
+export function parseSubredditName(input: string): ParsedSubreddit | null {
+  let trimmed = input.trim()
+  if (!trimmed) return null
+  const link = trimmed.match(/^(?:https?:\/\/)?(?:www\.|m\.|old\.)?reddit\.com\/r\/([A-Za-z0-9_]+)\/?(?:[?#].*)?$/)
+  if (link?.[1]) trimmed = link[1]
+  const bare = trimmed.match(/^(?:r\/)?([A-Za-z0-9_]+)$/)
+  if (!bare?.[1]) return null
+  const name = bare[1]
+  return { name, key: name.toLowerCase(), url: `https://reddit.com/r/${name}` }
+}
+
+/**
+ * Build a catalog row for a subreddit the mock hasn't seen before — the
+ * stand-in for the client resolving an unknown community. Subreddits don't
+ * gate entry, so resolved rows join immediately (accepted).
+ */
+export function communityFromSubreddit(parsed: ParsedSubreddit): {
+  id: string
+  platform: ConnectionPlatform
+  name: string
+  handle: string
+  members: string
+  description: string
+  url: string
+  entryQuestions: string[]
+} {
+  return {
+    id: `reddit-link-${parsed.key}`,
+    platform: 'reddit',
+    name: `r/${parsed.name}`,
+    handle: `r/${parsed.name}`,
+    members: '—',
+    description: 'Shared via subreddit name — resolved by the client.',
+    url: parsed.url,
+    entryQuestions: [],
+  }
+}
+
 /**
  * Build a catalog row for a group link the mock hasn't seen before — the
  * stand-in for the facebook client resolving an unknown group URL. Details

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ImagePlus, X } from 'lucide-react'
 import { Select, useToast } from '@listeningkit/ui'
 import { getAccounts, type ConnectionRecord } from '../lib/connections'
-import { createListing } from '../lib/listings'
+import { createListing, saveListing, type ListingRecord } from '../lib/listings'
 import { SOCIAL_ICONS, SocialBadge, type SocialIcon } from '../lib/social-icons'
 import { DashboardFormSheet } from './DashboardFormSheet'
 import { EmptyLine, FormInput, LoadingLine, PickRow } from './DashboardFormPrimitives'
@@ -29,18 +29,26 @@ const MAX_PHOTOS = 4
  *  - the photos: a file picker that reads up to four images as data URLs.
  * The draft goes out through `POST /listings` (which rejects photo-less
  * drafts) and comes back as `under-review` until the client clears it.
+ *
+ * Edit mode (`initialListing`): pre-fills every field and jumps straight to
+ * the details step with the account scope fixed — Back is hidden and the
+ * final confirm saves through `PATCH /listings/:id` instead of creating.
  */
 export function DashboardListingsForm({
   open,
   onClose,
-  onCreated
+  onCreated,
+  initialListing = null
 }: {
   open: boolean
   onClose: () => void
   /** Fires after a successful create so the parent page can reconcile. */
   onCreated: () => void
+  /** Edit this listing instead of creating one: jumps to the details step. */
+  initialListing?: ListingRecord | null
 }) {
   const { success, error: notifyError } = useToast()
+  const editing = initialListing ?? null
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [accounts, setAccounts] = useState<ConnectionRecord[] | null>(null)
   const [accountId, setAccountId] = useState<string | null>(null)
@@ -61,21 +69,26 @@ export function DashboardListingsForm({
 
   useEffect(() => {
     if (!open) return
-    setStep(1)
+    // Edit mode pre-fills from the record and jumps to details; create mode
+    // starts blank on the account pick.
+    setStep(editing ? 2 : 1)
     setAccounts(null)
     setAccountId(null)
-    setAccountConfirmed(false)
-    setTitle('')
-    setPrice('')
-    setCategory(CATEGORIES[0])
-    setCondition(CONDITION_NONE)
-    setLocation('')
-    setImages([])
+    setAccountConfirmed(editing !== null)
+    setTitle(editing?.title ?? '')
+    setPrice(editing?.price ?? '')
+    setCategory(editing?.category ?? CATEGORIES[0])
+    setCondition(editing?.condition ?? CONDITION_NONE)
+    setLocation(editing?.location ?? '')
+    setImages(editing ? [...editing.images] : [])
     setBusy(false)
-    getAccounts()
-      .then(setAccounts)
-      .catch(() => setAccounts([]))
-  }, [open])
+    // The account step never renders in edit mode, so no roster to load.
+    if (!editing) {
+      getAccounts()
+        .then(setAccounts)
+        .catch(() => setAccounts([]))
+    }
+  }, [open, initialListing])
 
   const detailsValid = title.trim() !== '' && /^\d+$/.test(price.trim()) && location.trim() !== ''
 
@@ -111,25 +124,34 @@ export function DashboardListingsForm({
       return
     }
     if (step < 3) return
-    const account = fbAccounts.find((fb) => fb.id === accountId)
-    if (!account || images.length === 0) return
+    if (images.length === 0) return
     const draft = {
       title: title.trim(),
       price: price.trim(),
       category,
       condition: condition === CONDITION_NONE ? null : condition,
       location: location.trim(),
-      account: account.label,
       images
     }
     setBusy(true)
     try {
-      const record = await createListing(draft)
-      success(`“${record.title}” published`, 'Under review on Facebook Marketplace.')
+      if (editing) {
+        // Account scope is fixed in edit mode — the stored label rides along.
+        const record = await saveListing(editing.listingId, { ...draft, account: editing.account })
+        success(`“${record.title}” updated`, 'Changes are live on the listing.')
+      } else {
+        const account = fbAccounts.find((fb) => fb.id === accountId)
+        if (!account) return
+        const record = await createListing({ ...draft, account: account.label })
+        success(`“${record.title}” published`, 'Under review on Facebook Marketplace.')
+      }
       onCreated()
       onClose()
     } catch (err: unknown) {
-      notifyError('Could not publish the listing', err instanceof Error ? err.message : 'Something went wrong.')
+      notifyError(
+        editing ? 'Could not save the listing' : 'Could not publish the listing',
+        err instanceof Error ? err.message : 'Something went wrong.'
+      )
     } finally {
       setBusy(false)
     }
@@ -138,17 +160,17 @@ export function DashboardListingsForm({
   return (
     <DashboardFormSheet
       open={open}
-      title="New listing"
+      title={editing ? 'Edit listing' : 'New listing'}
       subtitle="Publish to Facebook Marketplace — it lands under review until the client clears it."
       step={step}
       stepCount={3}
       stepHint={stepHint}
       busy={busy}
-      confirmLabel={step === 1 ? 'Continue' : step === 2 ? 'Continue' : step === 3 ? 'Publish listing' : undefined}
+      confirmLabel={step === 1 ? 'Continue' : step === 2 ? 'Continue' : step === 3 ? (editing ? 'Save changes' : 'Publish listing') : undefined}
       confirmDisabled={step === 1 ? accountId === null : step === 2 ? !detailsValid : images.length === 0}
       onConfirm={step === 1 ? continueFromAccount : confirm}
       onBack={back}
-      backDisabled={step === 1}
+      backDisabled={step === 1 || editing !== null}
       onClose={onClose}
     >
       {step === 1 ? (

@@ -1,3 +1,5 @@
+import type { AccountIssue, RawSignal } from '../account-issues/types'
+
 export type ConnectionPlatform = 'facebook' | 'x' | 'reddit'
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error'
@@ -22,4 +24,12 @@ export interface ConnectionRecord {
   viaProxy: boolean
   /** ISO timestamp of the last successful connect; null = added but not connected yet. */
   connectedAt: string | null
+  /** Last normalized issue the client observed on this account, if any. */
+  lastIssue?: AccountIssue | null
+  /** The raw platform signal behind `lastIssue`, preserved for display/debug. */
+  rawSignal?: RawSignal | null
+  /** ISO timestamp of the last health check / poll attempt. */
+  lastCheckedAt?: string | null
+  /** For transient issues (rate limit / backoff): seconds until the next safe attempt. */
+  retryAfter?: number | null
 }

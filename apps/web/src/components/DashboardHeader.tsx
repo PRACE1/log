@@ -8,11 +8,7 @@ export function DashboardHeader() {
   const clip = useSquircleClip<HTMLElement>(20)
 
   return (
-    <header ref={clip.ref} style={clip.style} className="m-4 flex shrink-0 items-center justify-between bg-white px-6 py-4 sm:px-8">
-      <div>
-        <h1 className="text-xl font-bold">Your listening dashboard</h1>
-        <p className="text-sm text-text-secondary">Signals from your sources will land here.</p>
-      </div>
+    <header ref={clip.ref} style={clip.style} className="m-4 flex shrink-0 items-center justify-end bg-white px-6 py-4 sm:px-8">
       <div className="flex items-center gap-3">
         <Button asChild variant="gray" size="xl" shadow="hard" className="font-bold">
           <Link to="/onboarding">

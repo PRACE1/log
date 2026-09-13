@@ -2,20 +2,14 @@ import { useEffect, useState } from 'react'
 import { useSquircleClip, useToast } from '@listeningkit/ui'
 import { SOCIAL_ICONS, type SocialIcon } from '@/lib/social-icons'
 import { getFeed, type FeedItem, type FeedPlatform } from '@/lib/feed'
+import { getKeywords } from '@/lib/keywords'
 import { DashboardFeedHeader } from './DashboardFeedHeader'
-import { FeedCardFrame } from './cards/FeedCardFrame'
+import { FeedCardFrame, CARD_NATURAL_WIDTHS } from './cards/FeedCardFrame'
 import { FacebookPostImage, FacebookPostText } from './cards/FacebookCard'
 import { RedditPostText, RedditComment } from './cards/RedditCard'
 import { TwitterPostText, TwitterPostImage } from './cards/TwitterCard'
 
-/** Full-size design widths in px — frames scale these down to fit. */
-const CARD_WIDTHS: Record<FeedPlatform, number> = {
-  facebook: 713.42,
-  x: 484,
-  reddit: 864
-}
-
-function FeedCard({ item }: { item: FeedItem }) {
+function FeedCard({ item, highlight }: { item: FeedItem; highlight: string[] }) {
   switch (item.platform) {
     case 'facebook':
       return item.variant === 'post-image' ? (
@@ -28,6 +22,7 @@ function FeedCard({ item }: { item: FeedItem }) {
           likes={item.likes}
           comments={item.comments}
           shares={item.shares ?? '0 shares'}
+          highlight={highlight}
         />
       ) : (
         <FacebookPostText
@@ -38,6 +33,7 @@ function FeedCard({ item }: { item: FeedItem }) {
           likes={item.likes}
           comments={item.comments}
           shares={item.shares ?? '0 shares'}
+          highlight={highlight}
         />
       )
     case 'x':
@@ -53,6 +49,7 @@ function FeedCard({ item }: { item: FeedItem }) {
           replies={item.replies}
           reposts={item.reposts}
           likes={item.likes}
+          highlight={highlight}
         />
       ) : (
         <TwitterPostText
@@ -65,6 +62,7 @@ function FeedCard({ item }: { item: FeedItem }) {
           replies={item.replies}
           reposts={item.reposts}
           likes={item.likes}
+          highlight={highlight}
         />
       )
     case 'reddit':
@@ -74,6 +72,7 @@ function FeedCard({ item }: { item: FeedItem }) {
           body={item.body.join(' ')}
           likes={item.likes}
           shares={item.shares ?? '0'}
+          highlight={highlight}
         />
       ) : (
         <RedditPostText
@@ -81,19 +80,20 @@ function FeedCard({ item }: { item: FeedItem }) {
           title={item.title ?? item.body.join(' ')}
           likes={item.likes}
           shares={item.shares ?? '0'}
+          highlight={highlight}
         />
       )
   }
 }
 
-function FeedColumn({ icon, items }: { icon: SocialIcon; items: FeedItem[] }) {
-  const naturalWidth = CARD_WIDTHS[icon.id as FeedPlatform] ?? 484
+function FeedColumn({ icon, items, highlight }: { icon: SocialIcon; items: FeedItem[]; highlight: string[] }) {
+  const naturalWidth = CARD_NATURAL_WIDTHS[icon.id as FeedPlatform] ?? 484
   return (
     <div className="lk-no-scrollbar flex min-h-0 flex-col gap-3 overflow-y-auto pb-4">
       <DashboardFeedHeader icon={icon} />
       {items.map((item) => (
         <FeedCardFrame key={item.id} naturalWidth={naturalWidth}>
-          <FeedCard item={item} />
+          <FeedCard item={item} highlight={highlight} />
         </FeedCardFrame>
       ))}
     </div>
@@ -122,6 +122,8 @@ function FeedSkeletonColumn({ icon }: { icon: SocialIcon }) {
 
 export function DashboardFeed() {
   const [items, setItems] = useState<FeedItem[] | null>(null)
+  // Phrases currently listened for — cards quote-highlight these words.
+  const [phrases, setPhrases] = useState<string[]>([])
   const { error: notifyError } = useToast()
 
   useEffect(() => {
@@ -141,6 +143,22 @@ export function DashboardFeed() {
     }
   }, [notifyError])
 
+  useEffect(() => {
+    let cancelled = false
+    getKeywords()
+      .then((list) => {
+        if (!cancelled) {
+          setPhrases(list.filter((keyword) => keyword.status === 'listening').map((keyword) => keyword.phrase))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPhrases([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const byPlatform = (platform: FeedPlatform) => (items ?? []).filter((item) => item.platform === platform)
 
   return (
@@ -149,7 +167,7 @@ export function DashboardFeed() {
         items === null ? (
           <FeedSkeletonColumn key={icon.id} icon={icon} />
         ) : (
-          <FeedColumn key={icon.id} icon={icon} items={byPlatform(icon.id as FeedPlatform)} />
+          <FeedColumn key={icon.id} icon={icon} items={byPlatform(icon.id as FeedPlatform)} highlight={phrases} />
         )
       )}
     </div>
