@@ -57,6 +57,30 @@ export interface ListingsResponse {
   listings: ListingRecord[]
 }
 
+/**
+ * A new-listing draft submitted by the dashboard form. `account` is the
+ * connected account label that will publish it — the same label space as
+ * lib/connections, so the form is shown only for connected facebook accounts.
+ * `images` are data URLs from the form's file picker (up to four; the first
+ * is the cover) — the mock store keeps them in memory, and the live client
+ * will upload the same bytes to marketplace. No status or listingUrl on
+ * drafts: the client assigns both on create.
+ */
+export interface ListingDraft {
+  title: string
+  price: string
+  category: string
+  condition: string | null
+  location: string
+  account: string
+  images: string[]
+}
+
+export interface ListingCreatedResponse {
+  listing: ListingRecord
+  listings: ListingRecord[]
+}
+
 export interface ListingStatusResponse {
   listingId: string
   status: ListingStatus

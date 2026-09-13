@@ -1,12 +1,14 @@
 import * as Flags from 'country-flag-icons/react/3x2'
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react'
 import { useLocation } from 'react-router-dom'
-import { CircleCheck, Clock, Copy, ExternalLink, Globe, HelpCircle, LogIn, Tag, Trash2 } from 'lucide-react'
-import { Badge, type BadgeColor, Dropdown, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@listeningkit/ui'
+import { CircleCheck, Clock, Copy, ExternalLink, Globe, HelpCircle, LogIn, Plus, Tag, Trash2 } from 'lucide-react'
+import { Badge, Button, type BadgeColor, Dropdown, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@listeningkit/ui'
 import { getAccounts, type ConnectionRecord } from '../lib/connections'
 import { getListings, LISTING_STATUSES, LISTING_STATUS_LABELS, type ListingRecord, type ListingStatus } from '../lib/listings'
 import { SocialBadge, SocialGlyph, SOCIAL_ICONS } from '../lib/social-icons'
 import { MarketplaceImages } from './MarketplaceImages'
+import { DashboardListingsForm } from './DashboardListingsForm'
+import { useDashboardFormSlot } from './DashboardFormSlot'
 
 const facebookIcon = SOCIAL_ICONS.find((icon) => icon.id === 'facebook')
 
@@ -83,6 +85,7 @@ export function DashboardListings() {
   const [listings, setListings] = useState<ListingRecord[] | null>(null)
   const [accounts, setAccounts] = useState<ConnectionRecord[] | null>(null)
   const [filter, setFilter] = useState('all')
+  const [formOpen, setFormOpen] = useState(false)
 
   const load = useCallback(() => {
     getListings()
@@ -94,7 +97,17 @@ export function DashboardListings() {
     load()
   }, [load])
 
-  // Pick up account changes made in Accounts/Settings when we come back.
+  // The form lives in the layout's third column, not in the page: register
+  // it when open, clear it when closed or when the page unmounts.
+  const setFormSlot = useDashboardFormSlot()
+  useEffect(() => {
+    if (!formOpen) {
+      setFormSlot(null)
+      return
+    }
+    setFormSlot(<DashboardListingsForm open onClose={() => setFormOpen(false)} onCreated={load} />)
+    return () => setFormSlot(null)
+  }, [formOpen, load, setFormSlot])
   useEffect(() => {
     getAccounts().then(setAccounts).catch(() => setAccounts([]))
   }, [location])
@@ -135,7 +148,12 @@ export function DashboardListings() {
             </p>
           </div>
         </div>
-        <Select
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="blue" size="lg" shadow="hard" onClick={() => setFormOpen(true)}>
+            <Plus aria-hidden="true" className="size-3.5" strokeWidth={2.25} />
+            Add listing
+          </Button>
+          <Select
           matchWidth
           value={filter}
           onChange={setFilter}
@@ -150,10 +168,11 @@ export function DashboardListings() {
           ]}
         />
       </div>
+        </div>
 
       {rows.length > 0 ? (
           <Table>
-            <table className="w-full text-left">
+            <table className="w-full min-w-[880px] text-left">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Listing</TableHead>
@@ -246,7 +265,7 @@ export function DashboardListings() {
               No {filter === 'all' ? '' : LISTING_STATUS_LABELS[filter as ListingStatus] + ' '}listings yet.
             </p>
           )
-        )}
-      </div>
+)}
+    </div>
   )
 }

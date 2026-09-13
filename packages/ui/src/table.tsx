@@ -8,9 +8,13 @@ const ROW_RADIUS = 12
 
 export interface TableProps extends React.HTMLAttributes<HTMLDivElement> {}
 
+// Fluid table surface: stretches to its full width, and when the parent
+// column gets narrower than the table's minimum, the table keeps its
+// shape and scrolls horizontally inside this surface instead of breaking
+// its rows into wrapped/squashed lines.
 export function Table({ className, children, ...props }: TableProps) {
   return (
-    <div className={className} {...props}>
+    <div className={cn('w-full min-w-0 overflow-x-auto', className)} {...props}>
       {children}
     </div>
   )

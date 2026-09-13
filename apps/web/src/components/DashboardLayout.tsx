@@ -1,30 +1,37 @@
-import { useState } from 'react'
+import { memo, useState, type ReactNode } from 'react'
 import { Outlet } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { useComposedRef, useSquircleBorder, useSquircleClip } from '@listeningkit/ui'
+import { useComposedRef, useSquircleClip } from '@listeningkit/ui'
 import { DashboardSidebar } from './DashboardSidebar'
 import { DashboardHeader } from './DashboardHeader'
+import { DashboardFormProvider } from './DashboardFormSlot'
 
 const SQUIRCLE_RADIUS = 28
 
 export function DashboardLayout() {
   const clip = useSquircleClip<HTMLDivElement>(SQUIRCLE_RADIUS)
-  const border = useSquircleBorder<HTMLDivElement>(SQUIRCLE_RADIUS)
   const toggleClip = useSquircleClip<HTMLButtonElement>(14)
-  const panelRef = useComposedRef(clip.ref, border.ref)
+  const panelRef = useComposedRef(clip.ref)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // The form overlay: pages register their form node when open, null when
+  // closed. Rendered ABOVE the layout at a higher z-level, never in-flow —
+  // the dashboard underneath keeps its shape (sidebar | content) with zero
+  // reflow while a form is up.
+  const [formSlot, setFormSlot] = useState<ReactNode | null>(null)
 
   return (
+    <DashboardFormProvider value={setFormSlot}>
     <div className="h-screen supports-[height:100dvh]:h-dvh overflow-hidden bg-[#2A8CFF] p-4 sm:p-6">
       <div className="relative mx-auto max-w-[1600px]">
         <div
           ref={panelRef}
           style={clip.style}
-          className="flex h-[calc(100vh_-_2rem)] supports-[height:100dvh]:h-[calc(100dvh_-_2rem)] overflow-hidden bg-[#FBFCFE] text-text-primary sm:h-[calc(100vh_-_3rem)]"
+          className="relative flex h-[calc(100vh_-_2rem)] supports-[height:100dvh]:h-[calc(100dvh_-_2rem)] overflow-hidden bg-[#FBFCFE] text-text-primary sm:h-[calc(100vh_-_3rem)]"
         >
           <DashboardSidebar collapsed={sidebarCollapsed} onToggleCollapsed={setSidebarCollapsed} />
 
-          <div className="relative flex min-h-0 flex-1 flex-col bg-transparent">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-transparent">
             <button
               type="button"
               onClick={() => setSidebarCollapsed((v) => !v)}
@@ -42,25 +49,55 @@ export function DashboardLayout() {
             </button>
             <DashboardHeader />
 
-            <main className="lk-no-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto bg-[#FBFCFE] px-6 pb-0 pt-6 sm:px-8 sm:pb-0 sm:pt-8">
-              <Outlet />
-            </main>
+            <div className="flex min-h-0 flex-1 items-stretch">
+              <main className="lk-no-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto bg-[#FBFCFE] px-6 pb-0 pt-6 sm:px-8 sm:pb-0 sm:pt-8">
+                <Outlet />
+              </main>
+            </div>
           </div>
-        </div>
 
-        {border.state.path && (
-          <svg
-            className="pointer-events-none absolute inset-0 block"
-            width={border.state.width}
-            height={border.state.height}
-            viewBox={`0 0 ${border.state.width} ${border.state.height}`}
-            style={{ overflow: 'visible' }}
-            aria-hidden="true"
-          >
-            <path d={border.state.path} fill="none" stroke="#FBFCFE" strokeWidth={10} />
-          </svg>
-        )}
+          {/* The form floats above the layout at a higher z-level: a dark
+            low-opacity scrim covering the whole layout, with the form docked
+            in the third column on the right (same 400px + padding, same
+            spot) — the dashboard underneath keeps its full width with zero
+            reflow. The panel lives in a memoized child so page re-renders
+            (polling, filters, per-card busy states) never re-render it. */}
+          <FormOverlay formSlot={formSlot} />
+        </div>
       </div>
     </div>
+    </DashboardFormProvider>
   )
 }
+
+/**
+ * The dashboard's form overlay. Memoized: it only re-renders when the
+ * registered form node changes identity, never when the page underneath
+ * re-renders. Covers the whole layout at a higher z-level with a dark
+ * low-opacity scrim, and docks the form in the third column on the right
+ * (same 400px width and padding, same spot) — the dashboard beneath never
+ * reflows. The layer is click-through except for the panel itself; the
+ * form's own Cancel/Escape/confirm paths close it.
+ */
+const FormOverlay = memo(function FormOverlay({ formSlot }: { formSlot: ReactNode | null }) {
+  return (
+    <AnimatePresence initial={false}>
+      {formSlot ? (
+        <motion.div
+          key="form-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-none absolute inset-0 z-30"
+          aria-hidden={false}
+        >
+          <div className="absolute inset-0 bg-[#0A1830]/45" aria-hidden="true" />
+          <div className="absolute inset-y-0 right-0 py-6 pr-6 sm:py-8 sm:pr-8">
+            <div className="pointer-events-auto h-full w-[400px]">{formSlot}</div>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  )
+})

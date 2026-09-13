@@ -7,6 +7,12 @@ const img = (id: string) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=640&q=80`
 
 /**
+ * Default photo for form-created listings — the same marketplace shot the
+ * mock rows use, so a fresh listing renders a photo fan immediately.
+ */
+export const DEFAULT_LISTING_IMAGE = img('photo-1558618666-fcd25c85cd64')
+
+/**
  * Mocked rows for the listings table. The first two are the live-verified
  * listings captured by facebook-camofox-client (docs/okf/marketplace_create.md):
  * 38629807913299080 published 2026-09-09 and sat in duplicate hold, while

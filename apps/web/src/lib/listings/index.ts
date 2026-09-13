@@ -1,5 +1,11 @@
 import { listingsApp } from './server'
-import type { ListingStatusResponse, ListingsResponse } from './types'
+import type {
+  ListingCreatedResponse,
+  ListingDraft,
+  ListingRecord,
+  ListingStatusResponse,
+  ListingsResponse
+} from './types'
 
 export * from './types'
 export { MOCK_FACEBOOK_ACCOUNTS, MOCK_LISTINGS } from './mock'
@@ -17,4 +23,22 @@ export async function getListingStatus(listingId: string): Promise<ListingStatus
   const res = await listingsApp.request(`/listings/${listingId}/status`)
   if (!res.ok) throw new Error(`Listing status request failed (${res.status})`)
   return (await res.json()) as ListingStatusResponse
+}
+
+/**
+ * Publish a new listing through `POST /listings`. Returns the created row
+ * (status `under-review` until the client clears it).
+ */
+export async function createListing(draft: ListingDraft): Promise<ListingRecord> {
+  const res = await listingsApp.request('/listings', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(draft),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error ?? `Could not create the listing (${res.status})`)
+  }
+  const parsed = (await res.json()) as ListingCreatedResponse
+  return parsed.listing
 }
