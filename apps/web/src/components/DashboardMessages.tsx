@@ -336,6 +336,10 @@ export function DashboardMessages() {
         [activeId]: (prev[activeId] ?? []).map((m) => (m.id === tempId ? res.message : m))
       }))
     } catch (err) {
+      setMessagesByThread((prev) => ({
+        ...prev,
+        [activeId]: (prev[activeId] ?? []).filter((m) => m.id !== tempId)
+      }))
       notifyError('Message failed to send', err instanceof Error ? err.message : 'Could not send message.')
     }
   }
