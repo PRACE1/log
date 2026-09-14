@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { siGithub, siGooglechrome } from 'simple-icons'
 import { Button } from '@listeningkit/ui'
 import { SOCIAL_ICONS, SocialGlyph } from '@/lib/social-icons'
@@ -48,10 +48,35 @@ export function OnboardingSteps() {  const [step, setStep] = useState<Step>(0)
   const [brandUrl, setBrandUrl] = useState('')
   const [looking, setLooking] = useState(false)
   const [lookupError, setLookupError] = useState<string | null>(null)
+  const revealScrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     clearBrand()
   }, [])
+
+  // Keep the reveal scrolled to the incoming stream: stickiness is tracked
+  // from scroll position (pre-mutation), so big blocks landing at once —
+  // like the whole sub-chain appearing — can't break the follow. If the
+  // reader scrolls up, following pauses until they're back near the bottom.
+  useEffect(() => {
+    if (step !== 4) return
+    const el = revealScrollRef.current
+    if (!el) return
+    let stick = true
+    el.scrollTop = el.scrollHeight
+    const onScroll = () => {
+      stick = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    const observer = new MutationObserver(() => {
+      if (stick) el.scrollTop = el.scrollHeight
+    })
+    observer.observe(el, { childList: true, subtree: true, characterData: true })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      observer.disconnect()
+    }
+  }, [step])
 
   function toggleSource(id: string) {
     setSources((prev) => (prev.includes(id) ? [] : [id]))
@@ -419,7 +444,21 @@ export function OnboardingSteps() {  const [step, setStep] = useState<Step>(0)
         </div>
       )}
 
-      {step === 4 && profile && <BrandRevealStep profile={profile} onContinue={() => setStep(5)} />}
+      {step === 4 && profile && (
+        <div className="relative mt-8 w-full">
+          <div ref={revealScrollRef} className="lk-no-scrollbar max-h-[68vh] overflow-y-auto pb-28 pt-20">
+            <BrandRevealStep profile={profile} onContinue={() => setStep(5)} />
+          </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#2a8cff] to-transparent"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#2a8cff] to-transparent"
+          />
+        </div>
+      )}
 
       {step === 5 && <ReadyFill />}
       </div>

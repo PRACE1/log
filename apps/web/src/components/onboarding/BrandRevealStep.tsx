@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@listeningkit/ui'
-import { GlobeIcon, Map, SearchIcon, Swords } from 'lucide-react'
+import { Check, GlobeIcon, HelpCircle, Map, SearchIcon, Swords } from 'lucide-react'
 import type { BrandProfile } from '@/lib/brand'
 import {
   ChainOfThought,
@@ -27,8 +27,7 @@ function InlineToolChip({ logo, name }: { logo: string; name: string }) {
   )
 }
 
-function toolChipFor(word: string): { logo: string; name: string; trailing: string } | null {
-  const trailing = word.match(/[.,!?;:]+$/)?.[0] ?? ''
+function toolChipFor(word: string): { logo: string; name: string; trailing: string } | null {  const trailing = word.match(/[.,!?;:]+$/)?.[0] ?? ''
   const clean = trailing ? word.slice(0, -trailing.length) : word
   if (clean === 'Firecrawl') return { logo: '/brand-assets/firecrawl-logo.svg', name: 'Firecrawl', trailing }
   if (clean === 'Treg') return { logo: '/brand-assets/treglogo.svg', name: 'Treg', trailing }
@@ -71,6 +70,19 @@ function StreamedLabel({ words, shown, complete }: { words: string[]; shown: num
   )
 }
 
+/**
+ * Mock competitors surfaced by the Treg lookup — name, domain, and how many
+ * tracked keywords they also rank for. Mirrors the platform cards from step 0
+ * of onboarding when presented below.
+ */
+const COMPETITORS = [
+  { name: 'BluePipe Co', domain: 'bluepipe.co', shared: 12 },
+  { name: 'RapidFix', domain: 'rapidfix.com', shared: 9 },
+  { name: 'HomeServe Local', domain: 'homeservelocal.com', shared: 8 },
+  { name: 'ProDrain', domain: 'prodrain.io', shared: 6 },
+  { name: 'Fixly', domain: 'fixly.co', shared: 4 },
+]
+
 export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile; onContinue: () => void }) {
   const fullText = `Okay the brand we're looking for is ${profile.identity.name} — let's use Firecrawl to go through and find out a bit more about who they are.`
   const words = fullText.split(' ')
@@ -88,6 +100,9 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
   const mappingWords = mappingText.split(' ')
   const [mappingShown, setMappingShown] = useState(0)
   const mappingDone = mappingShown >= mappingWords.length
+  const [foundCount, setFoundCount] = useState(0)
+  const foundAll = foundCount >= COMPETITORS.length
+  const [answer, setAnswer] = useState<'yes' | 'no' | null>(null)
 
   useEffect(() => {
     console.log('Brand profile:', profile)
@@ -126,11 +141,17 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
     return () => window.clearTimeout(id)
   }, [competitorsDone, mappingShown, mappingDone, mappingWords.length])
 
+  useEffect(() => {
+    if (!mappingDone || foundAll) return
+    const id = window.setTimeout(() => setFoundCount((prev) => prev + 1), 550)
+    return () => window.clearTimeout(id)
+  }, [mappingDone, foundAll, foundCount])
+
   return (
     <div className="mb-auto mt-8 w-full">
       <div className="w-full text-left">
         <ChainOfThought className="space-y-0 text-white [&_svg.lucide]:size-6">
-          <ChainOfThoughtHeader className="text-6xl font-bold leading-tight text-white sm:text-8xl [&>span]:text-center [&>svg]:hidden">
+          <ChainOfThoughtHeader className="pb-8 text-6xl font-bold leading-tight text-white sm:text-8xl [&>span]:text-center [&>svg]:hidden">
             Tracking {profile.identity.name}
           </ChainOfThoughtHeader>
           <div className="mx-auto w-full max-w-2xl">
@@ -157,7 +178,7 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
                 }
                 className="pb-6 text-xl text-white sm:text-2xl [&>div:first-child>span:first-child]:size-10"
               >                {sourcesDone ? (
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <div className="flex flex-wrap items-center gap-2 -mt-1">
                     <Source href={profile.identity.website}>
                       <SourceTrigger showFavicon label={profile.identity.name} className="rounded-sm" />
                       <SourceContent
@@ -189,11 +210,12 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
                 }
                 className="pb-6 text-xl text-white sm:text-2xl [&>div:first-child>span:first-child]:size-10 [&>div:last-child]:overflow-visible [&>div:first-child>div:last-child]:bottom-auto [&>div:first-child>div:last-child]:h-[64px]"
               >
+                {competitorsDone ? (
                 <ChainOfThought className="space-y-0 pt-8 text-white">
                   <ChainOfThoughtStep
                     icon={Map}
                     status={mappingDone ? 'complete' : 'active'}
-                    elbow
+                    elbow="in"
                     label={
                       <span className="text-xl font-medium leading-relaxed text-white sm:text-2xl">
                         <StreamedLabel words={mappingWords} shown={mappingShown} complete={mappingDone} />
@@ -201,13 +223,81 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
                     }
                     className="pb-3 text-xl text-white sm:text-2xl [&>div:first-child>div:last-child]:mt-0 [&>div:first-child>div:last-child]:bottom-auto [&>div:first-child>div:last-child]:h-[96px]"
                   />
+                  {COMPETITORS.slice(0, foundCount).map((competitor, index) => {
+                    const isLastFound = foundAll && index === foundCount - 1
+                    return (
+                      <ChainOfThoughtStep
+                        key={competitor.domain}
+                        icon={Check}
+                        status="complete"
+                        compact={!isLastFound}
+                        elbow={isLastFound ? 'out' : undefined}
+                        label={
+                          <span className="text-xl font-medium leading-relaxed text-white sm:text-2xl">
+                            Found Competitor {index + 1} — {competitor.name}
+                          </span>
+                        }
+                        className="text-xl text-white sm:text-2xl"
+                      >
+                        <div className="flex flex-wrap items-center gap-2 -mt-1">
+                          <Source href={`https://${competitor.domain}`}>
+                            <SourceTrigger showFavicon label={competitor.name} className="rounded-sm" />
+                            <SourceContent
+                              title={`${competitor.name} — ${competitor.domain}`}
+                              description={`${competitor.shared} shared keywords with ${profile.identity.name}.`}
+                            />
+                          </Source>
+                        </div>
+                      </ChainOfThoughtStep>
+                    )
+                  })}
                 </ChainOfThought>
+                ) : null}
+              </ChainOfThoughtStep>
+            </div>
+          ) : null}
+          {foundAll ? (
+            <div className="mx-auto w-full max-w-2xl">
+              <ChainOfThoughtStep
+                icon={HelpCircle}
+                status={answer === null ? 'active' : 'complete'}
+                label={
+                  <span className="text-xl font-medium leading-relaxed text-white sm:text-2xl">
+                    Do any of these competitors ring a bell?
+                  </span>
+                }
+                className="pb-6 text-xl text-white sm:text-2xl [&>div:first-child>span:first-child]:size-10 [&>div:first-child>div:last-child]:bottom-0"
+              >
+                {answer === null ? (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setAnswer('yes')}
+                      className="rounded-lg bg-white px-5 py-2 text-sm font-bold text-slate-900 transition-colors hover:bg-white/90"
+                    >
+                      Yes — I know them
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnswer('no')}
+                      className="rounded-lg border border-white/40 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                    >
+                      No — new to me
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-base text-white/80">
+                    {answer === 'yes'
+                      ? `Nice — we'll track them against ${profile.identity.name}.`
+                      : 'No problem — we\u2019ll keep listening anyway.'}
+                  </p>
+                )}
               </ChainOfThoughtStep>
             </div>
           ) : null}
         </ChainOfThought>
       </div>
-      {mappingDone ? (
+      {answer !== null ? (
         <Button
           type="button"
           onClick={onContinue}
