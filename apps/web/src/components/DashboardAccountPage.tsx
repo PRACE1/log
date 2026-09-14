@@ -61,7 +61,6 @@ function AccountMeta({ account }: { account: ConnectionRecord }) {
       ) : null}
       <Badge
         variant={SEVERITY_BADGE[severity]}
-        dot={severity !== 'unhealthy'}
         title={issue ? issue.detail : snapshot.health.reason}
       >
         {statusLabel}

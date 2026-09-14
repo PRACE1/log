@@ -163,7 +163,7 @@ function ConnectionRow({
         </span>
         {status !== 'error' &&
           (status === 'connected' ? (
-            <Badge variant="success" dot>
+            <Badge variant="success">
               Connected
             </Badge>
           ) : status === 'connecting' ? (

@@ -36,11 +36,13 @@ export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
   label: ReactNode;
   description?: ReactNode;
   status?: "complete" | "active" | "pending";
+  /** Render a rounded elbow branching into this step instead of the straight rail. */
+  elbow?: boolean;
 };
 
 const stepStatusStyles = {
   active: "border-white/10 bg-[#2A8CFF] text-white",
-  complete: "bg-black/5 text-foreground",
+  complete: "bg-white text-[#2A8CFF]",
   pending: "bg-black/5 text-muted-foreground/50",
 };
 
@@ -51,6 +53,7 @@ export const ChainOfThoughtStep = memo(
     label,
     description,
     status = "complete",
+    elbow = false,
     children,
     ...props
   }: ChainOfThoughtStepProps) => (
@@ -58,7 +61,7 @@ export const ChainOfThoughtStep = memo(
       className={cn("flex gap-2 text-sm", className)}
       {...props}
     >
-      <div className="relative -mt-1 shrink-0">
+      <div className="relative shrink-0">
         <span
           className={cn(
             "flex size-7 items-center justify-center rounded-md",
@@ -67,7 +70,10 @@ export const ChainOfThoughtStep = memo(
         >
           <Icon className="size-4" />
         </span>
-        <div className="absolute top-9 bottom-0 left-1/2 -mx-px w-px bg-border" />
+        {elbow ? (
+          <div className="absolute -top-2 left-[-29px] z-10 h-[26px] w-[29px] rounded-bl-xl border-b border-l border-white" />
+        ) : null}
+        <div className="absolute top-7 -bottom-6 left-1/2 mt-2 -mx-px w-px bg-white" />
       </div>
       <div className="flex-1 space-y-2 overflow-hidden">
         <div

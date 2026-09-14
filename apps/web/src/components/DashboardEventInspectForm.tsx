@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@listeningkit/ui'
 import {
   Brain,
+  Check,
   ChevronDown,
   ChevronRight,
   Flame,
   Lightbulb,
   MapPin,
   MessageSquareText,
-  PenLine,
   SearchIcon,
   SlidersHorizontal,
   TrendingUp,
@@ -23,6 +23,10 @@ import {
 } from '../lib/analytics'
 import { accountIssueSnapshot } from '../lib/account-issues'
 import { getAccounts, type ConnectionRecord } from '../lib/connections'
+import { getCommunities } from '../lib/communities'
+import { createKeyword } from '../lib/keywords'
+import { getBrand, type AiQuery } from '../lib/brand'
+import { buildAiQuery, draftReply, suggestKeywords } from '../lib/brand/query'
 import { SOCIAL_ICONS, SocialGlyph } from '../lib/social-icons'
 import { AccountHealthBadge } from './AccountHealthBadge'
 import { DashboardFormSheet } from './DashboardFormSheet'
@@ -76,10 +80,11 @@ const AI_TAGS_BY_TYPE: Record<FirehoseEventType, { label: string; icon: typeof F
 }
 
 const AI_NEXT_ACTIONS = [
-  { label: 'Find related mentions', icon: SearchIcon },
-  { label: 'Draft a response', icon: MessageSquareText },
-  { label: 'Create content', icon: PenLine }
+  { id: 'related', label: 'Find related mentions', icon: SearchIcon },
+  { id: 'reply', label: 'Draft a response', icon: MessageSquareText }
 ] as const
+
+type AiFollowUpId = (typeof AI_NEXT_ACTIONS)[number]['id']
 
 function formatTs(iso: string): string {
   const date = new Date(iso)
@@ -121,16 +126,256 @@ function AiTagPill({ label, icon: Icon, tone }: { label: string; icon: typeof Fl
   )
 }
 
-function AiNextActionRow({ label, icon: Icon }: { label: string; icon: typeof SearchIcon }) {
+function AiNextActionRow({
+  label,
+  icon: Icon,
+  expanded,
+  onClick
+}: {
+  label: string
+  icon: typeof SearchIcon
+  expanded: boolean
+  onClick: () => void
+}) {
   return (
     <button
       type="button"
+      onClick={onClick}
+      aria-expanded={expanded}
       className="flex w-full items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-left text-sm font-medium text-[#2A8CFF] transition-colors hover:bg-slate-100"
     >
       <Icon className="size-4 shrink-0" />
       <span className="flex-1">{label}</span>
-      <ChevronRight className="size-4 shrink-0 text-slate-400" />
+      <ChevronRight
+        className={`size-4 shrink-0 text-slate-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+      />
     </button>
+  )
+}
+
+/**
+ * "Find related mentions": candidate keyword phrases pulled from the post
+ * text (minus what's already tracked). Accepting one saves it as a real
+ * listening keyword — X keywords are word-scoped, facebook/reddit ones ride
+ * on the first joined community for the platform.
+ */
+function RelatedMentionsPanel({ query, event }: { query: AiQuery; event: FirehoseEvent }) {
+  const suggestions = useMemo(() => suggestKeywords(event, query.trackedPhrases), [event, query.trackedPhrases])
+  const [saved, setSaved] = useState<string[]>([])
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [custom, setCustom] = useState('')
+
+  async function acceptPhrase(raw: string) {
+    const phrase = raw.trim()
+    if (!phrase || busy) return
+    const key = phrase.toLowerCase()
+    if (saved.includes(key)) return
+    setBusy(phrase)
+    setError(null)
+    try {
+      let groupId: string | null = null
+      if (event.platform !== 'x') {
+        const communities = await getCommunities({ platform: event.platform })
+        const joined = communities.find((community) => community.joinState === 'accepted')
+        if (!joined) {
+          throw new Error(
+            `Join a group on this platform first — ${event.platform === 'facebook' ? 'Facebook' : 'Reddit'} keywords need a group to listen in.`
+          )
+        }
+        groupId = joined.id
+      }
+      await createKeyword({ phrase, platform: event.platform, groupId })
+      setSaved((prev) => [...prev, key])
+      setCustom('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save that keyword.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const remaining = suggestions.filter((phrase) => !saved.includes(phrase.toLowerCase()))
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+      <p className="text-xs font-semibold text-slate-700">Suggested keywords from this post</p>
+      {remaining.length === 0 ? (
+        <p className="mt-1.5 text-sm text-slate-500">
+          {saved.length > 0 ? 'All suggestions saved — add your own below.' : 'Nothing new in this post — try another event.'}
+        </p>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {remaining.map((phrase) => (
+            <li key={phrase} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm">
+              <span className="flex-1 font-medium text-slate-800">“{phrase}”</span>
+              <button
+                type="button"
+                onClick={() => acceptPhrase(phrase)}
+                disabled={busy !== null}
+                className="shrink-0 rounded-md bg-[#2A8CFF] px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-[#1E66C9] disabled:opacity-50"
+              >
+                {busy === phrase ? 'Saving…' : 'Accept'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {saved.length > 0 ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+          <Check className="size-3.5" />
+          {saved.length} saved — now listening
+        </p>
+      ) : null}
+      <form
+        className="mt-2 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          acceptPhrase(custom)
+        }}
+      >
+        <input
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+          placeholder="Add your own keyword"
+          aria-label="Add your own keyword"
+          className="h-9 min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#2A8CFF] focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={!custom.trim() || busy !== null}
+          className="h-9 shrink-0 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50"
+        >
+          Add
+        </button>
+      </form>
+      {error ? <p className="mt-1.5 text-xs font-medium text-red-600">{error}</p> : null}
+    </div>
+  )
+}
+
+/**
+ * "Draft a response": the event answered in the brand's voice, previewed in
+ * the post's own native card as the reply. Accept sends it (mock), or write
+ * your own and send that instead.
+ */
+function ReplyDraftPanel({ query, event }: { query: AiQuery; event: FirehoseEvent }) {
+  const draft = useMemo(() => draftReply(query), [query])
+  const [mode, setMode] = useState<'preview' | 'editing' | 'sent'>('preview')
+  const [body, setBody] = useState(draft)
+
+  useEffect(() => {
+    setBody(draft)
+    setMode('preview')
+  }, [draft])
+
+  const brandName = query.brand?.identity.name ?? 'Your business'
+
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+      <p className="text-xs font-semibold text-slate-700">Reply preview</p>
+      {mode === 'sent' ? (
+        <div className="rounded-lg bg-white p-4 text-center">
+          <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-emerald-600">
+            <Check className="size-4" />
+            Reply sent (mock)
+          </p>
+          <p className="mt-1 text-xs text-slate-500">The live client will post it to {event.platform}.</p>
+          <button
+            type="button"
+            onClick={() => setMode('editing')}
+            className="mt-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+          >
+            Write another
+          </button>
+        </div>
+      ) : mode === 'editing' ? (
+        <div className="space-y-2">
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={4}
+            aria-label="Your reply"
+            className="w-full rounded-lg border border-slate-200 bg-white p-3 text-sm leading-relaxed text-slate-800 focus:border-[#2A8CFF] focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMode('sent')}
+              disabled={!body.trim()}
+              className="flex-1 rounded-lg bg-[#2A8CFF] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#1E66C9] disabled:opacity-50"
+            >
+              Send reply
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setBody(draft)
+                setMode('preview')
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="rounded-xl bg-white p-3">
+            {event.platform === 'facebook' ? (
+              <FeedCardFrame naturalWidth={CARD_NATURAL_WIDTHS.facebook}>
+                <FacebookPostText
+                  authorName={brandName}
+                  timeAgo="now"
+                  lines={[body]}
+                  likes="0"
+                  comments="0 comments"
+                  shares="0 shares"
+                />
+              </FeedCardFrame>
+            ) : event.platform === 'x' ? (
+              <FeedCardFrame naturalWidth={CARD_NATURAL_WIDTHS.x}>
+                <TwitterPostText
+                  authorName={brandName}
+                  handle={handleFor(brandName)}
+                  body={body}
+                  timestamp="now"
+                  views="0"
+                  replies="0"
+                  reposts="0"
+                  likes="0"
+                />
+              </FeedCardFrame>
+            ) : (
+              <FeedCardFrame naturalWidth={CARD_NATURAL_WIDTHS.reddit}>
+                <RedditPostText communityName={event.group} title={body} likes="0" shares="0 comments" />
+              </FeedCardFrame>
+            )}
+          </div>
+          {!query.brand ? (
+            <p className="text-xs text-slate-500">
+              No brand profile yet — add your website in onboarding for voice-matched drafts.
+            </p>
+          ) : null}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMode('sent')}
+              className="flex-1 rounded-lg bg-[#2A8CFF] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#1E66C9]"
+            >
+              Accept reply
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('editing')}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+            >
+              Write your own
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -173,6 +418,14 @@ export function DashboardEventInspectForm({
   }, [event.accountId])
 
   const platformIcon = SOCIAL_ICONS.find((icon) => icon.id === event.platform)
+
+  const [openAction, setOpenAction] = useState<AiFollowUpId | null>(null)
+  // Brand snapshot per event: later onboarding edits can't shift a draft mid-read.
+  const brandSnapshot = useMemo(() => getBrand(), [event.id])
+  const query = useMemo(
+    () => (openAction ? buildAiQuery(openAction, event, brandSnapshot, phrases ?? []) : null),
+    [openAction, event, brandSnapshot, phrases]
+  )
 
   return (
     <DashboardFormSheet
@@ -293,9 +546,22 @@ export function DashboardEventInspectForm({
             </div>
             <div className="space-y-1.5">
               {AI_NEXT_ACTIONS.map((action) => (
-                <AiNextActionRow key={action.label} label={action.label} icon={action.icon} />
+                <AiNextActionRow
+                  key={action.id}
+                  label={action.label}
+                  icon={action.icon}
+                  expanded={openAction === action.id}
+                  onClick={() => setOpenAction((prev) => (prev === action.id ? null : action.id))}
+                />
               ))}
             </div>
+            {query ? (
+              query.action === 'related' ? (
+                <RelatedMentionsPanel query={query} event={event} />
+              ) : (
+                <ReplyDraftPanel query={query} event={event} />
+              )
+            ) : null}
           </div>
         </div>
       </div>

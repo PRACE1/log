@@ -61,8 +61,18 @@ export function DashboardLayout() {
             in the third column on the right (same 400px + padding, same
             spot) — the dashboard underneath keeps its full width with zero
             reflow. The panel lives in a memoized child so page re-renders
-            (polling, filters, per-card busy states) never re-render it. */}
-          <FormOverlay formSlot={formSlot} onDismiss={() => setFormSlot(null)} />
+            (polling, filters, per-card busy states) never re-render it.
+            Scrim dismiss only clears the rendered slot — pages own their
+            open-state (e.g. ?eventId= deep-links), so the dismiss is also
+            broadcast; pages that need to reset their state listen for it,
+            the rest ignore it. */}
+          <FormOverlay
+            formSlot={formSlot}
+            onDismiss={() => {
+              setFormSlot(null)
+              window.dispatchEvent(new CustomEvent('lk:form-dismissed'))
+            }}
+          />
         </div>
       </div>
     </div>

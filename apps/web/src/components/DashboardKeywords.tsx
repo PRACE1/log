@@ -50,7 +50,7 @@ function formatAddedAt(iso: string): string {
 
 function StatusBadge({ status }: { status: KeywordStatus }) {
   return status === 'listening' ? (
-    <Badge variant="success" dot>
+    <Badge variant="success">
       Listening
     </Badge>
   ) : (

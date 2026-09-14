@@ -3,10 +3,9 @@ import { Badge } from '@listeningkit/ui'
 import type { AccountHealth } from '../lib/health'
 
 /**
- * The standard account badge: the `Badge` pill whose variant, dot and
+ * The standard account badge: the `Badge` pill whose variant and
  * native tooltip all derive from one `lib/health` assessment, so every
- * dashboard surface shows the same account the same way. Healthy reads
- * as its own quiet state (green dot), anything less is flagged.
+ * dashboard surface shows the same account the same way.
  */
 export function AccountHealthBadge({
   label,
@@ -23,13 +22,13 @@ export function AccountHealthBadge({
   switch (health.state) {
     case 'healthy':
       return (
-        <Badge variant="success" dot icon={icon} className={className} title={health.reason}>
+        <Badge variant="success" icon={icon} className={className} title={health.reason}>
           {label}
         </Badge>
       )
     case 'degraded':
       return (
-        <Badge variant="warning" dot icon={icon} className={className} title={health.reason}>
+        <Badge variant="warning" icon={icon} className={className} title={health.reason}>
           {label}
         </Badge>
       )

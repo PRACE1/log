@@ -74,7 +74,7 @@ function StatusBadge({ account }: { account: ConnectionRecord }) {
         : 'Not connected'
   const title = issue ? issue.detail : snapshot.health.reason
   return (
-    <Badge variant={SEVERITY_BADGE[severity]} dot={severity !== 'unhealthy'} title={title}>
+    <Badge variant={SEVERITY_BADGE[severity]} title={title}>
       {label}
     </Badge>
   )

@@ -249,6 +249,9 @@ export function DashboardAnalytics({
               fill="url(#lk-mentions-fill)"
               dot={{ r: 2.5, fill: HERO, strokeWidth: 0 }}
               activeDot={{ r: 4, fill: DEEP, stroke: '#fff', strokeWidth: 2 }}
+              // Static board: the numbers must never replay when the page
+              // re-renders (e.g. opening the post inspect sheet).
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -277,7 +280,15 @@ export function DashboardAnalytics({
               labelStyle={{ fontWeight: 700 }}
               formatter={(value) => [`${value} signals`, 'Signals']}
             />
-            <Bar dataKey="count" name="Signals" radius={[0, 6, 6, 0]} barSize={18}>
+            <Bar
+              dataKey="count"
+              name="Signals"
+              radius={[0, 6, 6, 0]}
+              barSize={18}
+              // Static board: the numbers must never replay when the page
+              // re-renders (e.g. opening the post inspect sheet).
+              isAnimationActive={false}
+            >
               {typeRows.map((_, index) => (
                 <Cell key={index} fill={ROW_RAMP[index % ROW_RAMP.length]} />
               ))}
@@ -315,6 +326,9 @@ export function DashboardAnalytics({
                 cornerRadius={4}
                 stroke="#fff"
                 strokeWidth={2}
+                // Static board: the numbers must never replay when the page
+                // re-renders (e.g. opening the post inspect sheet).
+                isAnimationActive={false}
               >
                 {sentimentRows.map((row) => (
                   <Cell key={row.name} fill={row.fill} />

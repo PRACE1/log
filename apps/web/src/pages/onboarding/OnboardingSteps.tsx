@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { siGithub, siGooglechrome } from 'simple-icons'
 import { Button } from '@listeningkit/ui'
 import { SOCIAL_ICONS, SocialGlyph } from '@/lib/social-icons'
+import { clearBrand, extractBrandFromUrl, saveBrand, type BrandProfile } from '@/lib/brand'
+import { BrandRevealStep } from '@/components/onboarding/BrandRevealStep'
 import { FunnelVideo } from '@/components/FunnelVideo'
 import { ReadyFill } from '@/components/ReadyFill'
 
-type Step = 0 | 1 | 2 | 3
+type Step = 0 | 1 | 2 | 3 | 4 | 5
 
 // Swap in your own footage via VITE_ONBOARDING_VIDEO_URL (e.g. an R2 public URL).
 const VIDEO_URL =
@@ -34,12 +36,22 @@ function BrandHeader() {
   )
 }
 
-export function OnboardingSteps() {
-  const [step, setStep] = useState<Step>(0)
+export function OnboardingSteps() {  const [step, setStep] = useState<Step>(0)
   const [sources, setSources] = useState<string[]>([])
   const [tokens, setTokens] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Brand profile: always starts blank — visiting onboarding flushes any
+  // previously saved brand so a refresh never restores an old one. Typing
+  // never advances the step — only the Look up / Skip buttons move forward.
+  const [profile, setProfile] = useState<BrandProfile | null>(null)
+  const [brandUrl, setBrandUrl] = useState('')
+  const [looking, setLooking] = useState(false)
+  const [lookupError, setLookupError] = useState<string | null>(null)
+
+  useEffect(() => {
+    clearBrand()
+  }, [])
 
   function toggleSource(id: string) {
     setSources((prev) => (prev.includes(id) ? [] : [id]))
@@ -52,6 +64,23 @@ export function OnboardingSteps() {
 
   function finish() {
     setStep(2)
+  }
+
+  function lookupBrand() {
+    if (looking) return
+    setLooking(true)
+    setLookupError(null)
+    // Mock fetch beat — the live lookup will hit the brand service here.
+    window.setTimeout(() => {
+      try {
+        setProfile(saveBrand(extractBrandFromUrl(brandUrl)))
+        setStep(4)
+      } catch (err) {
+        setLookupError(err instanceof Error ? err.message : 'Could not read that URL.')
+      } finally {
+        setLooking(false)
+      }
+    }, 700)
   }
 
   return (
@@ -314,7 +343,85 @@ export function OnboardingSteps() {
          </div>
        )}
 
-      {step === 3 && <ReadyFill />}
+      {step === 3 && (
+        <div className="mt-8 w-full">
+          <h1 className="text-4xl font-bold leading-tight sm:text-5xl">Whose brand are we listening for?</h1>
+          <p className="mt-4 text-lg text-white/85">
+            Paste your website and we&apos;ll pull your brand profile — drafts and replies will sound like you.
+            Optional, skip anytime.
+          </p>
+          <div className="mx-auto mt-8 w-full max-w-4xl text-left">
+            {profile ? (
+              <div className="rounded-2xl bg-white p-5 text-slate-900">
+                <p className="text-xs font-bold uppercase tracking-wide text-[#2a8cff]">Brand profile</p>
+                <p className="mt-1 text-2xl font-bold">{profile.identity.name}</p>
+                <p className="mt-0.5 text-sm text-slate-600">{profile.identity.tagline}</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  <span className="font-semibold text-slate-900">Site:</span> {profile.identity.website}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  <span className="font-semibold text-slate-900">Voice:</span> {profile.voice.tone}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  <span className="font-semibold text-slate-900">Offerings:</span>{' '}
+                  {profile.offerings.items.length > 0 ? profile.offerings.items.join(', ') : 'None detected yet'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setProfile(null)}
+                  className="mt-3 bg-transparent p-0 text-sm font-semibold text-slate-500 underline decoration-dashed underline-offset-4 hover:text-slate-800"
+                >
+                  Use a different website
+                </button>
+              </div>
+            ) : (
+              <>
+                <label className="block">
+                  <textarea
+                    value={brandUrl}
+                    onChange={(e) => {
+                      setBrandUrl(e.target.value)
+                      setLookupError(null)
+                    }}
+                    placeholder={'Paste your website URL here, e.g. acmeplumbing.com'}
+                    rows={1}
+                    autoComplete="off"
+                    inputMode="url"
+                    className="w-full resize-none overflow-hidden whitespace-nowrap rounded-xl border border-white/30 bg-white px-5 py-4 text-3xl font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:border-white focus:outline-none"
+                  />
+                </label>
+                {lookupError ? <p className="mt-2 text-sm font-semibold text-red-200">{lookupError}</p> : null}
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    type="button"
+                    onClick={lookupBrand}
+                    disabled={looking || brandUrl.trim().length === 0}
+                    size="xl"
+                    shadow="hard"
+                    variant="blue"
+                    className="h-14 w-full max-w-md rounded-xl px-10 font-bold text-white disabled:opacity-80"
+                  >
+                    {looking ? 'Looking up…' : 'Look up brand'}
+                  </Button>
+                </div>
+              </>
+            )}
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setStep(profile ? 4 : 5)}
+                className="bg-transparent p-0 text-sm font-semibold text-white/70 underline decoration-dashed underline-offset-4 transition-colors hover:text-white"
+              >
+                Skip now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === 4 && profile && <BrandRevealStep profile={profile} onContinue={() => setStep(5)} />}
+
+      {step === 5 && <ReadyFill />}
       </div>
     </div>
   )

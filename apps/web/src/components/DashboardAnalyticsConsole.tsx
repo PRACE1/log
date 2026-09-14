@@ -91,7 +91,8 @@ function formatTs(iso: string): string {
  * Full-width raw firehose for a keyword: the actual events behind the
  * graphs, newest first, sliding into view in a white squircle card. A type
  * filter narrows the stream; the list caps at RENDER_CAP rows. Clicking a
- * row opens the analytics for the keyword the post was captured under.
+ * row navigates to the keyword's analytics with ?eventId= so the page can
+ * auto-open that post in the inspect sheet.
  */
 export function DashboardAnalyticsConsole({
 events,
@@ -106,7 +107,8 @@ events,
   fullText?: boolean
   /**
    * Row click override. Without it a row navigates to the keyword's
-   * analytics; the per-keyword view passes the inspect-form opener instead
+   * analytics with ?eventId= so the page auto-opens that post's inspect
+   * sheet; the per-keyword view passes the inspect-form opener instead
    * (you're already there — the row opens the post's context sheet).
    */
   onSelect?: (event: FirehoseEvent) => void
@@ -189,11 +191,15 @@ events,
               <button
                 type="button"
                 key={event.id}
-                onClick={() => (onSelect ? onSelect(event) : navigate(`/dashboard/analytics/${event.keywordId}`))}
+                onClick={() =>
+                  onSelect
+                    ? onSelect(event)
+                    : navigate(`/dashboard/analytics/${event.keywordId}?eventId=${event.id}`)
+                }
                 title={
                   onSelect
                     ? `Open the details of this post — ${event.author} · ${event.group}`
-                    : `Open the keyword analytics this post was captured under — ${event.author} · ${event.group}`
+                    : `Open this post in its keyword analytics — ${event.author} · ${event.group}`
                 }
                 className="flex w-full items-center gap-2.5 rounded-xl bg-black/[0.02] px-3 py-2 text-left transition-colors hover:bg-black/[0.05]"
               >

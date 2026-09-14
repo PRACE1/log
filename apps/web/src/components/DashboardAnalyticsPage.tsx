@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Badge } from '@listeningkit/ui'
 import { getKeywords, type Keyword } from '../lib/keywords'
@@ -29,7 +29,7 @@ function AnalyticsMeta({ keyword }: { keyword: Keyword }) {
           {platformLabel(keyword.platform)}
         </Badge>
       ) : null}
-      <Badge variant={keyword.status === 'listening' ? 'success' : 'muted'} dot={keyword.status === 'listening'}>
+      <Badge variant={keyword.status === 'listening' ? 'success' : 'muted'}>
         {keyword.status === 'listening' ? 'Listening' : 'Paused'}
       </Badge>
     </div>
@@ -39,10 +39,12 @@ function AnalyticsMeta({ keyword }: { keyword: Keyword }) {
  * Per-keyword analytics, keyed by the keyword UUID in the route
  * (`/dashboard/analytics/:keywordId`). Row one is the three-graph summary,
  * row two the full-width firehose console — both read the same mocked
- * aggregate for the id.
+ * aggregate for the id. A row click from the overview lands here with
+ * ?eventId= so that exact post auto-opens in the inspect sheet.
  */
 export function DashboardAnalyticsPage() {
   const { keywordId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const setFormSlot = useDashboardFormSlot()
   const [keyword, setKeyword] = useState<Keyword | null | undefined>(undefined)
   const [inspectedEvent, setInspectedEvent] = useState<FirehoseEvent | null>(null)
@@ -61,6 +63,63 @@ export function DashboardAnalyticsPage() {
     }
   }, [keywordId])
 
+  const analytics = useMemo(
+    () => (keyword ? getKeywordAnalytics(keyword.id, keyword.phrase, keyword.platform) : null),
+    [keyword]
+  )
+
+  // Deep-link from the overview firehose: a row there navigates here with
+  // ?eventId= so that exact post auto-opens in the inspect sheet.
+  useEffect(() => {
+    const eventId = searchParams.get('eventId')
+    if (!eventId || !analytics) return
+    const found = analytics.events.find((row) => row.id === eventId)
+    if (found) setInspectedEvent((prev) => (prev?.id === found.id ? prev : found))
+  }, [searchParams, analytics])
+
+  function handleSelectEvent(event: FirehoseEvent) {
+    setInspectedEvent(event)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('eventId', event.id)
+        return next
+      },
+      { replace: true }
+    )
+  }
+
+  function handleCloseInspect() {
+    setInspectedEvent(null)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('eventId')
+        return next
+      },
+      { replace: true }
+    )
+  }
+
+  // Scrim (backdrop) dismiss clears the rendered slot without touching page
+  // state — without this reset the ?eventId= param + selection go stale: a
+  // later click on the same row no-ops and any remount reopens the sheet.
+  useEffect(() => {
+    const onExternalDismiss = () => {
+      setInspectedEvent(null)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('eventId')
+          return next
+        },
+        { replace: true }
+      )
+    }
+    window.addEventListener('lk:form-dismissed', onExternalDismiss)
+    return () => window.removeEventListener('lk:form-dismissed', onExternalDismiss)
+  }, [setSearchParams])
+
   // The post inspect form docks in the dashboard form slot — a row here has
   // no analytics page to navigate to (it's already this keyword's), so it
   // opens the sheet over the content instead.
@@ -70,17 +129,12 @@ export function DashboardAnalyticsPage() {
           <DashboardEventInspectForm
             event={inspectedEvent}
             phrases={[keyword?.phrase ?? '']}
-            onClose={() => setInspectedEvent(null)}
+            onClose={handleCloseInspect}
           />
         ) : null
     )
     return () => setFormSlot(null)
   }, [inspectedEvent, keyword, setFormSlot])
-
-  const analytics = useMemo(
-    () => (keyword ? getKeywordAnalytics(keyword.id, keyword.phrase, keyword.platform) : null),
-    [keyword]
-  )
 
   if (keyword === undefined) {
     return (
@@ -121,7 +175,7 @@ export function DashboardAnalyticsPage() {
       </div>
 
       <DashboardAnalytics keywordId={keyword.id} phrase={keyword.phrase} platform={keyword.platform} />
-      <DashboardAnalyticsConsole events={analytics.events} phrases={[keyword.phrase]} onSelect={setInspectedEvent} />
+      <DashboardAnalyticsConsole events={analytics.events} phrases={[keyword.phrase]} onSelect={handleSelectEvent} />
     </div>
   )
 }

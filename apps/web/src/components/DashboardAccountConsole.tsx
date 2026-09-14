@@ -107,7 +107,7 @@ function FirehoseRow({ row, onInspect }: { row: FirehoseRowData; onInspect: (eve
       >
         {label}
       </span>
-      <Badge variant={SEVERITY_BADGE[severity]} dot={severity !== 'unhealthy'} className="shrink-0">
+      <Badge variant={SEVERITY_BADGE[severity]} className="shrink-0">
         {SEVERITY_LABEL[severity]}
       </Badge>
       {current ? (

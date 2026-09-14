@@ -49,7 +49,7 @@ function JoinStateBadge({ community }: { community: Community }) {
   switch (community.joinState) {
     case 'accepted':
       return (
-        <Badge variant="success" dot>
+        <Badge variant="success">
           Member
         </Badge>
       )

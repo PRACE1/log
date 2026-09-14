@@ -59,7 +59,7 @@ export const MOCK_CONNECTIONS: ConnectionRecord[] = [
   {
     id: 'x-ops',
     platform: 'x',
-    label: 'X · Ops',
+    label: 'drainpatrol88',
     viaProxy: false,
     connectedAt: '2026-09-13T22:10:00+00:00',
     lastIssue: 'rate_limited',
@@ -70,7 +70,7 @@ export const MOCK_CONNECTIONS: ConnectionRecord[] = [
   {
     id: 'x-legacy',
     platform: 'x',
-    label: 'X · Legacy',
+    label: 'rustyvalve_92',
     viaProxy: false,
     connectedAt: '2026-08-30T08:00:00+00:00'
   },
@@ -84,7 +84,7 @@ export const MOCK_CONNECTIONS: ConnectionRecord[] = [
   {
     id: 'reddit-watch',
     platform: 'reddit',
-    label: 'Reddit · Watch',
+    label: 'subwatcher_dan',
     viaProxy: true,
     connectedAt: '2026-09-09T14:25:00+00:00',
     lastIssue: 'ip_or_account_blocked',
@@ -94,7 +94,7 @@ export const MOCK_CONNECTIONS: ConnectionRecord[] = [
   {
     id: 'x-archived',
     platform: 'x',
-    label: 'X · Archived',
+    label: 'retiredwrench',
     viaProxy: false,
     connectedAt: '2026-09-05T10:00:00+00:00',
     lastIssue: 'session_expired',
