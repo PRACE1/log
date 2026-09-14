@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { facebookMessagingApp } from './facebook/server'
 import { twitterMessagingApp } from './twitter/server'
 import { redditMessagingApp } from './reddit/server'
-import type { MessagesResponse, MessagingPlatform, ThreadsResponse } from './types'
+import type { MessagesResponse, MessagingPlatform, SendMessageResponse, ThreadsResponse } from './types'
 
 export * from './types'
 
@@ -34,4 +34,19 @@ export async function getThreadMessages(platform: MessagingPlatform, threadId: s
   const res = await messagingApp.request(`/${platform}/threads/${threadId}/messages`)
   if (!res.ok) throw new Error(`Messages request failed (${res.status})`)
   return (await res.json()) as MessagesResponse
+}
+
+export async function sendMessage(
+  platform: MessagingPlatform,
+  threadId: string,
+  body: string,
+  image?: string
+): Promise<SendMessageResponse> {
+  const res = await messagingApp.request(`/${platform}/threads/${threadId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body, ...(image && { image }) })
+  })
+  if (!res.ok) throw new Error(`Send message failed (${res.status})`)
+  return (await res.json()) as SendMessageResponse
 }

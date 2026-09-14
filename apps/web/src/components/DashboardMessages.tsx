@@ -13,6 +13,7 @@ import {
 import {
   getThreadMessages,
   getThreads,
+  sendMessage,
   type ChatMessage,
   type MessagingPlatform,
   type Thread
@@ -312,19 +313,31 @@ export function DashboardMessages() {
     setThreads((prev) => prev?.map((t) => (t.id === id ? { ...t, unread: 0 } : t)) ?? prev)
   }
 
-  function appendMessage(body: string, image?: string) {
+  async function appendMessage(body: string, image?: string) {
     const text = body.trim()
     if ((!text && !image) || !activeId) return
-    const message: ChatMessage = {
-      id: `${activeId}-local-${Date.now()}`,
+    const thread = threads?.find((t) => t.id === activeId)
+    const platform = thread?.platform ?? messagesPlatform
+    const tempId = `${activeId}-local-${Date.now()}`
+    const optimistic: ChatMessage = {
+      id: tempId,
       threadId: activeId,
       from: 'me',
       body: text,
       sentAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       ...(image && { image })
     }
-setMessagesByThread((prev) => ({ ...prev, [activeId]: [...(prev[activeId] ?? []), message] }))
-  setThreads((prev) => prev?.map((t) => (t.id === activeId ? { ...t, preview: text || 'Photo' } : t)) ?? prev)
+    setMessagesByThread((prev) => ({ ...prev, [activeId]: [...(prev[activeId] ?? []), optimistic] }))
+    setThreads((prev) => prev?.map((t) => (t.id === activeId ? { ...t, preview: text || 'Photo' } : t)) ?? prev)
+    try {
+      const res = await sendMessage(platform, activeId, text, image)
+      setMessagesByThread((prev) => ({
+        ...prev,
+        [activeId]: (prev[activeId] ?? []).map((m) => (m.id === tempId ? res.message : m))
+      }))
+    } catch (err) {
+      notifyError('Message failed to send', err instanceof Error ? err.message : 'Could not send message.')
+    }
   }
 
   const visible = (threads ?? []).filter((t) => t.platform === messagesPlatform)

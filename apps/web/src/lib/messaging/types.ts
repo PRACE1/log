@@ -33,3 +33,13 @@ export interface MessagesResponse {
   threadId: string
   messages: ChatMessage[]
 }
+
+export interface SendMessageRequest {
+  body: string
+  image?: string
+}
+
+export interface SendMessageResponse {
+  threadId: string
+  message: ChatMessage
+}

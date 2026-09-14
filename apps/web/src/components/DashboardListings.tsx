@@ -212,7 +212,12 @@ export function DashboardListings() {
               </TableHeader>
               <TableBody>
                 {rows.map((listing) => (
-                  <TableRow key={listing.listingId}>
+                  <TableRow
+                    key={listing.listingId}
+                    onClick={() => handleEdit(listing)}
+                    title={`Edit “${listing.title}”`}
+                    className="cursor-pointer hover:bg-slate-50/50"
+                  >
                     <TableCell>
                       <div className="flex items-center gap-4">
                         <MarketplaceImages images={listing.images} title={listing.title} />
@@ -248,7 +253,7 @@ export function DashboardListings() {
                     <TableCell className="whitespace-nowrap text-right text-text-secondary">
                       {formatPublished(listing.publishedAt)}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
         <Dropdown
           aria-label="Listing actions"
           items={[
