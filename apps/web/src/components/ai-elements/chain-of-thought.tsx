@@ -41,7 +41,7 @@ export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
 };
 
 const stepStatusStyles = {
-  active: "border-white/10 bg-[#2A8CFF] text-white",
+  active: "border-white/25 bg-white/15 text-white",
   complete: "bg-white text-[#2A8CFF]",
   pending: "bg-black/5 text-muted-foreground/50",
 };
@@ -71,9 +71,9 @@ export const ChainOfThoughtStep = memo(
           <Icon className="size-4" />
         </span>
         {elbow ? (
-          <div className="absolute -top-2 left-[-29px] z-10 h-[26px] w-[29px] rounded-bl-xl border-b border-l border-white" />
+          <div className="absolute -top-2 left-[-29px] z-10 h-[24px] w-[29px] rounded-bl-xl border-b-2 border-l-2 border-white" />
         ) : null}
-        <div className="absolute top-7 -bottom-6 left-1/2 mt-2 -mx-px w-px bg-white" />
+        <div className="absolute top-7 -bottom-6 left-1/2 ml-[-0.875px] mt-2 w-[1.75px] bg-white" />
       </div>
       <div className="flex-1 space-y-2 overflow-hidden">
         <div

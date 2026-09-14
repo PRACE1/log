@@ -53,6 +53,24 @@ function renderStreamedWords(all: string[], shown: number, complete: boolean) {
   )
 }
 
+/**
+ * Streams words without moving layout: the full text renders invisibly to
+ * reserve the final height, while the visible copy streams over the top.
+ * Rails and elbows anchored to these rows stay pixel-perfect throughout.
+ */
+function StreamedLabel({ words, shown, complete }: { words: string[]; shown: number; complete: boolean }) {
+  return (
+    <span className="relative block">
+      <span aria-hidden="true" className="invisible">
+        {renderStreamedWords(words, words.length, true)}
+      </span>
+      <span className="absolute inset-0" aria-live="polite">
+        {renderStreamedWords(words, shown, complete)}
+      </span>
+    </span>
+  )
+}
+
 export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile; onContinue: () => void }) {
   const fullText = `Okay the brand we're looking for is ${profile.identity.name} — let's use Firecrawl to go through and find out a bit more about who they are.`
   const words = fullText.split(' ')
@@ -109,7 +127,7 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
   }, [competitorsDone, mappingShown, mappingDone, mappingWords.length])
 
   return (
-    <div className="mt-8 w-full">
+    <div className="mb-auto mt-8 w-full">
       <div className="w-full text-left">
         <ChainOfThought className="space-y-0 text-white [&_svg.lucide]:size-6">
           <ChainOfThoughtHeader className="text-6xl font-bold leading-tight text-white sm:text-8xl [&>span]:text-center [&>svg]:hidden">
@@ -121,7 +139,7 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
               status={done ? 'complete' : 'active'}
               label={
               <span className="text-xl font-medium leading-relaxed text-white sm:text-2xl">
-                {renderStreamedWords(words, shown, done)}
+                <StreamedLabel words={words} shown={shown} complete={done} />
               </span>
               }
               className="pb-6 text-xl text-white sm:text-2xl [&>div:first-child>span:first-child]:size-10"
@@ -134,22 +152,21 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
                 status={sourcesDone ? 'complete' : 'active'}
                 label={
                   <span className="text-xl font-medium leading-relaxed text-white sm:text-2xl">
-                    {sourcesWords.slice(0, sourcesShown).join(' ')}
-                    {sourcesDone ? '' : '▍'}
+                    <StreamedLabel words={sourcesWords} shown={sourcesShown} complete={sourcesDone} />
                   </span>
                 }
                 className="pb-6 text-xl text-white sm:text-2xl [&>div:first-child>span:first-child]:size-10"
               >                {sourcesDone ? (
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <Source href={profile.identity.website}>
-                      <SourceTrigger showFavicon label={profile.identity.name} />
+                      <SourceTrigger showFavicon label={profile.identity.name} className="rounded-sm" />
                       <SourceContent
                         title={`${profile.identity.name} — official site`}
                         description={profile.identity.tagline}
                       />
                     </Source>
                     <Source href="https://firecrawl.dev">
-                      <SourceTrigger showFavicon label="Firecrawl" />
+                      <SourceTrigger showFavicon label="Firecrawl" className="rounded-sm" />
                       <SourceContent
                         title="Firecrawl"
                         description="Company data and web extraction for the brand lookup."
@@ -167,7 +184,7 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
                 status={mappingDone ? 'complete' : 'active'}
                 label={
                   <span className="text-xl font-medium leading-relaxed text-white sm:text-2xl">
-                    {renderStreamedWords(competitorsWords, competitorsShown, competitorsDone)}
+                    <StreamedLabel words={competitorsWords} shown={competitorsShown} complete={competitorsDone} />
                   </span>
                 }
                 className="pb-6 text-xl text-white sm:text-2xl [&>div:first-child>span:first-child]:size-10 [&>div:last-child]:overflow-visible [&>div:first-child>div:last-child]:bottom-auto [&>div:first-child>div:last-child]:h-[64px]"
@@ -179,10 +196,10 @@ export function BrandRevealStep({ profile, onContinue }: { profile: BrandProfile
                     elbow
                     label={
                       <span className="text-xl font-medium leading-relaxed text-white sm:text-2xl">
-                        {renderStreamedWords(mappingWords, mappingShown, mappingDone)}
+                        <StreamedLabel words={mappingWords} shown={mappingShown} complete={mappingDone} />
                       </span>
                     }
-                    className="pb-3 text-xl text-white sm:text-2xl [&>div:first-child]:flex [&>div:first-child]:flex-col [&>div:first-child]:justify-center [&>div:first-child>div:last-child]:mt-0"
+                    className="pb-3 text-xl text-white sm:text-2xl [&>div:first-child>div:last-child]:mt-0 [&>div:first-child>div:last-child]:bottom-auto [&>div:first-child>div:last-child]:h-[96px]"
                   />
                 </ChainOfThought>
               </ChainOfThoughtStep>
