@@ -58,3 +58,8 @@ instead of flashing or smoking
 (`apps/web/src/pages/onboarding/OnboardingSteps.tsx`,
 `apps/web/src/components/ReadyFill.tsx`). Dev-only skip bar jumps between
 onboarding steps. Deps: xstate, @xstate/react (`apps/web/package.json`).
+
+### 2026-09-14 - working tree
+Two ~80-100MB mp4s that rode along in history were deleted from the tree and
+`*.mp4` joined `*.mp3`/`*.srt` in `.gitignore` so binary media can't be
+committed again (`.gitignore`). Blobs still exist earlier in history.
