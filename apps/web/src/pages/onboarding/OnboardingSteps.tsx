@@ -49,6 +49,36 @@ export function OnboardingSteps() {  const [step, setStep] = useState<Step>(0)
   const [looking, setLooking] = useState(false)
   const [lookupError, setLookupError] = useState<string | null>(null)
   const revealScrollRef = useRef<HTMLDivElement>(null)
+  // Exit transition 4 -> 5: Continue scrolls the reveal back up and slides it
+  // out; only then does the fill step mount (no hard cut). Reduced motion
+  // skips the beat and swaps immediately.
+  const [revealLeaving, setRevealLeaving] = useState(false)
+  const leaveTimer = useRef(0)
+
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
+
+  function handleRevealContinue() {
+    if (revealLeaving) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    setRevealLeaving(true)
+    revealScrollRef.current?.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+    leaveTimer.current = window.setTimeout(() => setStep(5), reduce ? 0 : 750)
+  }
+
+  // Local-only debug skip: jump to any onboarding step. Stripped from
+  // production builds (import.meta.env.DEV is false there).
+  function debugGoTo(next: Step) {
+    window.clearTimeout(leaveTimer.current)
+    setRevealLeaving(false)
+    if (next === 4 && !profile) {
+      try {
+        setProfile(saveBrand(extractBrandFromUrl('acmeplumbing.com')))
+      } catch {
+        // leave profile null; step 4 simply renders nothing without one
+      }
+    }
+    setStep(next)
+  }
 
   useEffect(() => {
     clearBrand()
@@ -110,6 +140,24 @@ export function OnboardingSteps() {  const [step, setStep] = useState<Step>(0)
 
   return (
     <div className="relative mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 pb-16 pt-24 text-center sm:px-10">
+      {import.meta.env.DEV ? (
+        <div className="fixed left-2 top-2 z-[60] flex items-center gap-0.5 rounded-full bg-black/60 px-2 py-1 font-mono text-[11px] text-white backdrop-blur">
+          <span className="px-1 font-bold text-amber-300">DEV</span>
+          {(['Sources', 'Video', 'Tokens', 'Brand', 'Reveal', 'Fill'] as const).map((label, index) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => debugGoTo(index as Step)}
+              aria-current={step === index ? 'step' : undefined}
+              className={`rounded-full px-2 py-0.5 transition-colors ${
+                step === index ? 'bg-white font-bold text-slate-900' : 'hover:bg-white/20'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="absolute inset-x-0 top-6 flex justify-center">
         <BrandHeader />
       </div>
@@ -401,21 +449,23 @@ export function OnboardingSteps() {  const [step, setStep] = useState<Step>(0)
               </div>
             ) : (
               <>
-                <label className="block">
-                  <textarea
-                    value={brandUrl}
-                    onChange={(e) => {
-                      setBrandUrl(e.target.value)
-                      setLookupError(null)
-                    }}
-                    placeholder={'Paste your website URL here, e.g. acmeplumbing.com'}
-                    rows={1}
-                    autoComplete="off"
-                    inputMode="url"
-                    className="w-full resize-none overflow-hidden whitespace-nowrap rounded-xl border border-white/30 bg-white px-5 py-4 text-3xl font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:border-white focus:outline-none"
-                  />
-                </label>
-                {lookupError ? <p className="mt-2 text-sm font-semibold text-red-200">{lookupError}</p> : null}
+                <div className="rounded-2xl bg-white p-5">
+                  <label className="block">
+                    <textarea
+                      value={brandUrl}
+                      onChange={(e) => {
+                        setBrandUrl(e.target.value)
+                        setLookupError(null)
+                      }}
+                      placeholder={'Paste your website URL here, e.g. acmeplumbing.com'}
+                      rows={1}
+                      autoComplete="off"
+                      inputMode="url"
+                      className="w-full resize-none overflow-hidden whitespace-nowrap rounded-xl border border-slate-200 bg-white px-5 py-4 text-3xl font-bold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:border-[#2a8cff] focus:outline-none"
+                    />
+                  </label>
+                  {lookupError ? <p className="mt-2 text-sm font-semibold text-red-600">{lookupError}</p> : null}
+                </div>
                 <div className="mt-4 flex justify-center">
                   <Button
                     type="button"
@@ -423,10 +473,9 @@ export function OnboardingSteps() {  const [step, setStep] = useState<Step>(0)
                     disabled={looking || brandUrl.trim().length === 0}
                     size="xl"
                     shadow="hard"
-                    variant="blue"
-                    className="h-14 w-full max-w-md rounded-xl px-10 font-bold text-white disabled:opacity-80"
+                    className="h-14 w-full max-w-md rounded-xl bg-white px-10 font-bold text-slate-900 hover:bg-white/90 disabled:opacity-60"
                   >
-                    {looking ? 'Looking up…' : 'Look up brand'}
+                    {looking ? 'Looking up…' : 'Continue'}
                   </Button>
                 </div>
               </>
@@ -445,17 +494,21 @@ export function OnboardingSteps() {  const [step, setStep] = useState<Step>(0)
       )}
 
       {step === 4 && profile && (
-        <div className="relative mt-8 w-full">
+        <div
+          className={`relative mt-8 w-full transition-all duration-700 ease-out ${
+            revealLeaving ? '-translate-y-10 opacity-0' : ''
+          }`}
+        >
           <div ref={revealScrollRef} className="lk-no-scrollbar max-h-[68vh] overflow-y-auto pb-28 pt-20">
-            <BrandRevealStep profile={profile} onContinue={() => setStep(5)} />
+            <BrandRevealStep profile={profile} onContinue={handleRevealContinue} leaving={revealLeaving} />
           </div>
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#2a8cff] to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 z-30 h-24 bg-gradient-to-b from-[#2a8cff] to-transparent"
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#2a8cff] to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-24 bg-gradient-to-t from-[#2a8cff] to-transparent"
           />
         </div>
       )}

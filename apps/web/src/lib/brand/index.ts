@@ -1,7 +1,18 @@
 import { isRecord, loadPersistedState, savePersistedState } from '../persist'
-import type { BrandProfile } from './types'
+import type { BrandProfile, KeywordStrategyMapping } from './types'
 
-export type { AiFollowUpAction, AiQuery, BrandIdentity, BrandOfferings, BrandProfile, BrandVoice } from './types'
+export type {
+  AiFollowUpAction,
+  AiQuery,
+  BrandIdentity,
+  BrandOfferings,
+  BrandProfile,
+  BrandVoice,
+  CommunityPick,
+  KeywordStrategyMapping,
+  KeywordTargetEntry,
+  SearchStrategyEntry,
+} from './types'
 
 const STORAGE_KEY = 'brand-profile'
 
@@ -34,6 +45,54 @@ export function saveBrand(profile: Omit<BrandProfile, 'updatedAt'>): BrandProfil
 /** Forget the brand profile (user skipped or reset onboarding). */
 export function clearBrand(): void {
   savePersistedState(STORAGE_KEY, null)
+}
+
+const MAPPING_KEY = 'keyword-strategy-mapping'
+
+function isPage(value: unknown): value is { title: string; href: string } {
+  return isRecord(value) && typeof value.title === 'string' && typeof value.href === 'string'
+}
+
+function isKeywordStrategyMapping(value: unknown): value is KeywordStrategyMapping {
+  if (!isRecord(value) || !Array.isArray(value.targets) || !Array.isArray(value.strategies)) return false
+  if (typeof value.savedAt !== 'string') return false
+  if (value.selectedPhrase !== undefined && typeof value.selectedPhrase !== 'string') return false
+  for (const target of value.targets) {
+    if (!isRecord(target) || typeof target.phrase !== 'string' || typeof target.intent !== 'string') return false
+    if (!Array.isArray(target.pages) || !target.pages.every(isPage)) return false
+  }
+  for (const strategy of value.strategies) {
+    if (!isRecord(strategy) || typeof strategy.id !== 'string' || typeof strategy.title !== 'string') return false
+    if (typeof strategy.category !== 'string' || typeof strategy.dork !== 'string') return false
+  }
+  if (value.groups !== undefined) {
+    if (!Array.isArray(value.groups)) return false
+    for (const group of value.groups) {
+      if (!isRecord(group) || typeof group.id !== 'string' || typeof group.platform !== 'string') return false
+      if (typeof group.name !== 'string' || typeof group.detail !== 'string') return false
+    }
+  }
+  if (value.interested !== undefined && !isStringArray(value.interested)) return false
+  return true
+}
+
+/** Read the saved keyword + search-strategy mapping; null when never saved. */
+export function getKeywordMapping(): KeywordStrategyMapping | null {
+  return loadPersistedState(MAPPING_KEY, isKeywordStrategyMapping)
+}
+
+/** Persist the keyword + search-strategy mapping for the rest of the workflow. */
+export function saveKeywordMapping(
+  mapping: Omit<KeywordStrategyMapping, 'savedAt'>
+): KeywordStrategyMapping {
+  const next: KeywordStrategyMapping = { ...mapping, savedAt: new Date().toISOString() }
+  savePersistedState(MAPPING_KEY, next)
+  return next
+}
+
+/** Fill a strategy dork template with the keyword and brand site. */
+export function fillDork(template: string, keyword: string, site: string): string {
+  return template.split('{keyword}').join(keyword).split('{site}').join(site)
 }
 
 function humanizeHost(host: string): string {

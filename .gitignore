@@ -47,3 +47,7 @@ yarn-error.log*
 
 # railcode deploy sync state (per-folder; never commit)
 .railcode
+
+# audio / captions (never commit binary media or transcripts)
+*.mp3
+*.srt

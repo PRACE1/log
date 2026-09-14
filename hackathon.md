@@ -12,7 +12,7 @@
 - **Auth:** none
 - **AI models:** none
 - **Started:** 2026-09-12T21:03:28Z
-- **Last updated:** 2026-09-13T22:48:54Z
+- **Last updated:** 2026-09-14T07:37:57Z
 
 ## Log
 
@@ -43,3 +43,18 @@ post inspect sheet; scrim dismiss resets the selection
 (`apps/web/src/components/DashboardAnalytics.tsx`,
 `DashboardAnalyticsConsole.tsx`, `DashboardAnalyticsPage.tsx`,
 `DashboardLayout.tsx`).
+
+### 2026-09-14 - feat/listings-create-form
+Brand reveal runs on a forward-only XState machine (competitors to keywords
+to groups): a No appends an inline retry round, a Yes continues from the
+accepted round instead of rewinding. Keyword retries show selectable keyword
+cards per round with per-round picks; the groups familiar loop keeps retry
+history and the interested step uses the accepted set
+(`apps/web/src/lib/reveal/machine.ts`, `apps/web/src/lib/reveal/flow.ts`,
+`apps/web/src/components/onboarding/BrandRevealStep.tsx`).
+Continue scrolls the reveal up and fades it out before the fill step mounts;
+the fill shows torph copy first (logo at 88%) and the white rises as liquid
+instead of flashing or smoking
+(`apps/web/src/pages/onboarding/OnboardingSteps.tsx`,
+`apps/web/src/components/ReadyFill.tsx`). Dev-only skip bar jumps between
+onboarding steps. Deps: xstate, @xstate/react (`apps/web/package.json`).

@@ -7,11 +7,15 @@ import { MorphLine } from './MorphLine'
 
 export const FILL_DURATION_MS = 5000
 // Reveal the logo once the pour is nearly done; it flips white -> blue at 100%.
-const LOGO_AT = 80
+// Torph lines cycle every 2200ms, so 88 lands right as the second line
+// finishes — the copy gets its full beat before the logo takes over.
+const LOGO_AT = 88
 const WHITE = '#ffffff'
 
-// Flat 2D pure-white liquid over the dark onboarding backdrop. Single low-cutoff
-// level so even thin dye reads solid — no lighting, no bubbles, crisp edges.
+// Flat 2D pure-white liquid over the dark onboarding backdrop. Single cutoff
+// level low enough that the laid band reads as one solid body — dye is
+// additive, so the overlapping blobs stay well above it while stray wisps
+// fall off. No lighting, no bubbles, crisp edges.
 const WHITE_LIQUID = threshold({
   levels: [{ cutoff: 0.18, color: WHITE }],
   background: 'transparent',
@@ -49,6 +53,13 @@ export function ReadyFill({ onReady }: { onReady?: () => void }) {
   const [settled, setSettled] = useState(false)
   const frameRef = useRef(0) // throttle emission to every 2nd frame
   const frontRef = useRef(0) // fill front 0..1, mirrored from progress for onFrame
+  // Entrance: fade in over the exiting reveal instead of popping in on step change.
+  const [entered, setEntered] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   useEffect(() => {
     frontRef.current = progress / 100
@@ -80,16 +91,19 @@ export function ReadyFill({ onReady }: { onReady?: () => void }) {
 
   const handleSimReady = useCallback((f: Fluid) => {
     fluidRef.current = f
-    // opening band along the bottom edge
-    for (let i = 0; i < 3; i++) {
-      f.splat(0.25 + i * 0.25, 0.08, 0, 120, { color: WHITE, radius: 0.25 })
+    // opening band along the bottom edge — fat overlapping blobs with almost
+    // no upward velocity, so it pools at the bottom as liquid instead of
+    // blasting to the top like smoke.
+    for (let i = 0; i < 5; i++) {
+      f.splat(0.1 + i * 0.2, 0.06, 0, 10, { color: WHITE, radius: 0.14 })
     }
   }, [])
 
   // rise driver — options are read once at mount, so this only reads refs.
-  // lays a solid band of overlapping blobs along the fill front as it sweeps
-  // bottom -> top, so they merge into one body instead of stretching into
-  // strands. curl stays near zero so nothing filaments.
+  // lays a dense band of overlapping blobs along the fill front as it sweeps
+  // bottom -> top: fat enough to stay above the cutoff and merge into one
+  // body (dye never dissipates), gentle enough to keep pace with progress
+  // instead of racing ahead of it.
   const handleFrame = useCallback(() => {
     if (!risingRef.current) return
     frameRef.current += 1
@@ -99,16 +113,18 @@ export function ReadyFill({ onReady }: { onReady?: () => void }) {
     const front = Math.max(0.05, Math.min(0.96, frontRef.current))
     for (let i = 0; i < 10; i++) {
       const x = Math.min(0.98, Math.max(0.02, (i + 0.5) / 10 + (Math.random() - 0.5) * 0.04))
-      f.splat(x, front + (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 30, 40 + Math.random() * 50, {
+      f.splat(x, front + (Math.random() - 0.5) * 0.01, (Math.random() - 0.5) * 10, 10 + Math.random() * 20, {
         color: WHITE,
-        radius: 0.2,
+        radius: 0.14,
       })
     }
   }, [])
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-hidden"
+      className={`fixed inset-0 z-50 overflow-hidden transition-opacity duration-500 ${
+        entered ? 'opacity-100' : 'opacity-0'
+      }`}
       role="status"
       aria-label={ready ? 'ListeningKit ready' : 'Rising'}
     >
@@ -116,14 +132,14 @@ export function ReadyFill({ onReady }: { onReady?: () => void }) {
       <FluidCanvas
         className="absolute inset-0 h-full w-full"
         render={WHITE_LIQUID}
-        gravity={-40}
+        gravity={-12}
         densityDissipation={1}
-        curl={3}
+        curl={1}
         speed={0.6}
-        splatRadius={0.22}
+        splatRadius={0.15}
         dyeResolution={512}
         emitters={{
-          pointer: { color: WHITE, intensity: 0.4 },
+          pointer: { color: WHITE, intensity: 0.2 },
         }}
         onFrame={handleFrame}
         onReady={handleSimReady}

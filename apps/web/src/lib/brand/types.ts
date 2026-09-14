@@ -38,6 +38,43 @@ export interface BrandProfile {
 /** The two follow-up actions on the event inspect sheet. */
 export type AiFollowUpAction = 'related' | 'reply'
 
+/** A keyword target the brand wants to rank for, with example ranking pages. */
+export interface KeywordTargetEntry {
+  phrase: string
+  intent: string
+  pages: { title: string; href: string }[]
+}
+
+/** A Google Search / Dorking strategy card the user can select. */
+export interface SearchStrategyEntry {
+  id: string
+  category: string
+  title: string
+  problem: string
+  /** Query template with {keyword} and {site} placeholders. */
+  dork: string
+}
+
+/** The saved keyword + search-strategy mapping for the rest of the workflow. */
+export interface KeywordStrategyMapping {
+  targets: KeywordTargetEntry[]
+  strategies: SearchStrategyEntry[]
+  /** The operand phrase the user said relates to what they're doing. */
+  selectedPhrase?: string
+  /** The community set the user recognized, if any. */
+  groups?: CommunityPick[]
+  /** Ids of the groups they want to post in and listen to. */
+  interested?: string[]
+  savedAt: string
+}
+
+/** A community suggestion the reveal surfaced. */
+export interface CommunityPick {
+  id: string
+  platform: string
+  name: string
+  detail: string
+}
 /**
  * The query a follow-up runs: the captured event, the tracked phrases to
  * exclude, and the brand snapshot the mock AI drafts against. A null brand

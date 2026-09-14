@@ -1,0 +1,7 @@
+# Git hooks managed by lefthook (https://github.com/evilmartians/lefthook).
+# Install after cloning: pnpm exec lefthook install
+
+pre-push:
+  jobs:
+    - name: hackathon log updated within 30 min
+      run: node scripts/check-hackathon-log.mjs

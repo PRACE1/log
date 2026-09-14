@@ -38,15 +38,23 @@ export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
   description?: ReactNode;
   status?: "complete" | "active" | "pending";
   /**
-   * Render a rounded elbow joint instead of a straight rail.
-   * - "in" (or `true`): the trunk enters from above-left and curves down-right
-   *   into this icon. Use on the FIRST step of a nested sub-chain — the trunk
-   *   keeps running past this point (drawn by the parent step), this just
-   *   shows the branch peeling off of it.
-   * - "out": this icon's own outgoing rail curves out to the left instead of
-   *   running straight down, rejoining the trunk below. Use on the LAST step
-   *   of a nested sub-chain. This REPLACES the straight rail — it doesn't
-   *   render alongside it.
+   * Nested sub-chain joints. The pattern, end to end:
+   *
+   * 1. TRUNK (parent step): a fixed-height straight rail (`bottom-auto` +
+   *    explicit `h-[Npx]` override) plus `overflow-visible` on the content
+   *    column, so the entry elbow below isn't clipped. The trunk stops above
+   *    the nested chain on purpose — it must NOT run full height, or it
+   *    doubles the nested rails into one long line.
+   * 2. ENTRY (`elbow` / `"in"`, first nested step): an SVG elbow branching
+   *    off the trunk and curving right into this icon. Renders alongside
+   *    this step's own straight rail.
+   * 3. MIDDLE steps: `compact` rails — flush under the icon, 4px tuck past
+   *    the row bottom so short joints meet with no overshoot, no hairline gap.
+   * 4. EXIT (`elbow="out"`, last nested step): the mirrored SVG elbow curving
+   *    back out to the left, rejoining the trunk below. This REPLACES the
+   *    straight rail — it doesn't render alongside it, or the joint doubles.
+   * 5. TERMINAL (question step after the chain): `bottom-0` rail override so
+   *    the final rail ends flush at its row instead of dangling past it.
    */
   elbow?: boolean | "in" | "out";
   /**
@@ -80,12 +88,12 @@ export const ChainOfThoughtStep = memo(
     return (
       <div className={cn("flex gap-2 text-sm", className)} {...props}>
         <div className="relative shrink-0">
-          <span
-            className={cn(
-              "flex size-7 items-center justify-center rounded-md",
-              stepStatusStyles[status]
-            )}
-          >
+        <span
+          className={cn(
+            "shadow-hard flex size-7 items-center justify-center rounded-md",
+            stepStatusStyles[status]
+          )}
+        >
             <Icon className="size-4" />
           </span>
 
